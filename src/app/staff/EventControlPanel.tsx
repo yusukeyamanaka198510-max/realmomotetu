@@ -1,0 +1,231 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+
+type EventInfo = {
+  id: string;
+  name: string;
+  status: string;
+  start_at: string | null;
+  end_at: string | null;
+  time_limit_minutes: number | null;
+  leaderboard_hide_minutes_before_end: number;
+  obstruction_cooldown_seconds: number;
+};
+
+// datetime-local入力用にローカルタイムゾーンの "YYYY-MM-DDTHH:mm" 形式へ変換
+function toDatetimeLocalValue(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export function EventControlPanel({
+  event,
+  topTeams,
+}: {
+  event: EventInfo;
+  topTeams: { team_name: string; coin_balance_cache: number }[];
+}) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [minutes, setMinutes] = useState(event.time_limit_minutes ?? 240);
+  const [hideMinutes, setHideMinutes] = useState(event.leaderboard_hide_minutes_before_end);
+  const [endAtInput, setEndAtInput] = useState(toDatetimeLocalValue(event.end_at));
+  const [nameDraft, setNameDraft] = useState(event.name);
+  const [cooldownSeconds, setCooldownSeconds] = useState(event.obstruction_cooldown_seconds);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`event:${event.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "events", filter: `id=eq.${event.id}` }, () =>
+        router.refresh()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [event.id, router]);
+
+  async function handleStart() {
+    const useFixedEnd = !!endAtInput;
+    const confirmMsg = useFixedEnd
+      ? `${new Date(endAtInput).toLocaleString("ja-JP")}に終了するようイベントを開始します。よろしいですか?`
+      : `制限時間${minutes}分でイベントを開始します。よろしいですか?`;
+    if (!window.confirm(confirmMsg)) return;
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_start_event", {
+      p_time_limit_minutes: useFixedEnd ? null : minutes,
+      p_end_at: useFixedEnd ? new Date(endAtInput).toISOString() : null,
+    });
+    setBusy(false);
+    if (error) return window.alert(error.message);
+    router.refresh();
+  }
+
+  async function handleSaveCooldown() {
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_set_obstruction_cooldown", { p_seconds: cooldownSeconds });
+    setBusy(false);
+    if (error) return window.alert(error.message);
+    router.refresh();
+  }
+
+  async function handleSaveName() {
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_update_event_name", { p_name: nameDraft });
+    setBusy(false);
+    if (error) return window.alert(error.message);
+    router.refresh();
+  }
+
+  async function handleForceEnd() {
+    const reason = window.prompt("強制終了の理由を入力してください");
+    if (reason === null) return;
+    if (!window.confirm("イベントを強制終了します。以降、参加者は新規操作ができなくなります。よろしいですか?")) return;
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_force_end_event", { p_reason: reason });
+    setBusy(false);
+    if (error) return window.alert(error.message);
+    router.refresh();
+  }
+
+  async function handleSaveHideMinutes() {
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_set_leaderboard_hide_minutes", { p_minutes: hideMinutes });
+    setBusy(false);
+    if (error) return window.alert(error.message);
+    router.refresh();
+  }
+
+  const isEnded = event.status === "FORCE_ENDED" || event.status === "ENDED";
+
+  return (
+    <div className="mt-4 rounded border border-zinc-200 p-4 dark:border-zinc-800">
+      <div className="flex items-center gap-2 border-b border-zinc-200 pb-3 text-sm dark:border-zinc-800">
+        <span className="text-zinc-500">イベント名(参加者画面には表示されない、社内管理用のラベル)</span>
+        <input
+          type="text"
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.target.value)}
+          className="flex-1 min-w-[140px] rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+        />
+        <button onClick={handleSaveName} disabled={busy || !nameDraft.trim()} className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700">
+          保存
+        </button>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between">
+        <div>
+          <p className="text-sm">
+            ステータス: <span className="font-semibold">{event.status}</span>
+          </p>
+          {event.end_at && (
+            <p className="text-xs text-zinc-500">終了予定: {new Date(event.end_at).toLocaleString("ja-JP")}</p>
+          )}
+        </div>
+        {event.status === "SCHEDULED" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-zinc-500">終了日時指定</span>
+            <input
+              type="datetime-local"
+              value={endAtInput}
+              onChange={(e) => setEndAtInput(e.target.value)}
+              className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+            />
+            <span className="text-xs text-zinc-400">または</span>
+            <input
+              type="number"
+              value={minutes}
+              onChange={(e) => setMinutes(Number(e.target.value))}
+              disabled={!!endAtInput}
+              className="w-20 rounded border border-zinc-300 px-2 py-1 text-sm disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800"
+            />
+            <span className="text-sm">分後に終了</span>
+            <button
+              onClick={handleStart}
+              disabled={busy}
+              className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+            >
+              イベント開始
+            </button>
+          </div>
+        )}
+        {event.status === "RUNNING" && (
+          <button
+            onClick={handleForceEnd}
+            disabled={busy}
+            className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          >
+            強制終了
+          </button>
+        )}
+      </div>
+
+      <div className="mt-3 flex items-center gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
+        <span>終了</span>
+        <input
+          type="number"
+          min={0}
+          value={hideMinutes}
+          onChange={(e) => setHideMinutes(Number(e.target.value))}
+          className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+        />
+        <span>分前からランキング・ゴール表示を参加者から非表示にする(0=常に表示)</span>
+        <button
+          onClick={handleSaveHideMinutes}
+          disabled={busy}
+          className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700"
+        >
+          保存
+        </button>
+      </div>
+
+      <div className="mt-3 flex items-center gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
+        <span>妨害カードのクールタイム</span>
+        <input
+          type="number"
+          min={0}
+          value={cooldownSeconds}
+          onChange={(e) => setCooldownSeconds(Number(e.target.value))}
+          className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+        />
+        <span>秒(同一チームから同じ相手への妨害カード連続使用を防ぐ。0=無効)</span>
+        <button
+          onClick={handleSaveCooldown}
+          disabled={busy}
+          className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700"
+        >
+          保存
+        </button>
+      </div>
+
+      {isEnded && topTeams.length === 1 && (
+        <p className="mt-3 rounded bg-amber-100 p-3 text-sm font-semibold dark:bg-amber-900">
+          優勝: {topTeams[0].team_name}(所持コイン {topTeams[0].coin_balance_cache})
+        </p>
+      )}
+      {isEnded && topTeams.length > 1 && (
+        <div className="mt-3 rounded bg-amber-100 p-3 text-sm font-semibold dark:bg-amber-900">
+          <p>
+            同着1位({topTeams.length}チーム、所持コイン {topTeams[0].coin_balance_cache})— 本部判断で最終順位を決定してください
+          </p>
+          <ul className="mt-1 list-disc pl-5 font-normal">
+            {topTeams.map((t) => (
+              <li key={t.team_name}>{t.team_name}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}

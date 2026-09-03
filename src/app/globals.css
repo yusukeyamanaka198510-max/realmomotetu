@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4f1e8;
+  --foreground: #241f14;
+
+  /* ===== Real Momotetsu Game UI — design tokens ===== */
+  --game-red: #ef4444;
+  --game-pink: #ff6fa5;
+  --game-blue: #3b82f6;
+  --game-skyblue: #38bdf8;
+  --game-navy: #1e2a55;
+  --game-yellow: #ffd93d;
+  --game-gold: #f5a623;
+  --game-green: #22c55e;
+  --game-purple: #9333ea;
+  --game-orange: #fb923c;
+  --game-white: #fffdf7;
+
+  --game-shadow-sm: 0 2px 0 rgba(0, 0, 0, 0.18);
+  --game-shadow-md: 0 4px 0 rgba(0, 0, 0, 0.2), 0 8px 16px -4px rgba(0, 0, 0, 0.25);
+  --game-shadow-lg: 0 6px 0 rgba(0, 0, 0, 0.22), 0 16px 32px -8px rgba(0, 0, 0, 0.35);
+  --game-radius-md: 16px;
+  --game-radius-lg: 24px;
+
+  --game-dur-micro: 160ms;
+  --game-dur-ui: 280ms;
+  --game-dur-result: 600ms;
+  --game-dur-event: 1800ms;
+  --game-ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-game: var(--font-mplus-rounded);
+
+  --color-game-red: var(--game-red);
+  --color-game-pink: var(--game-pink);
+  --color-game-blue: var(--game-blue);
+  --color-game-skyblue: var(--game-skyblue);
+  --color-game-navy: var(--game-navy);
+  --color-game-yellow: var(--game-yellow);
+  --color-game-gold: var(--game-gold);
+  --color-game-green: var(--game-green);
+  --color-game-purple: var(--game-purple);
+  --color-game-orange: var(--game-orange);
+  --color-game-white: var(--game-white);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #171310;
+    --foreground: #f3ede0;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* ===== Game text stroke/shadow utilities (reusable, work with any dynamic text) ===== */
+.game-text-title {
+  font-family: var(--font-game), sans-serif;
+  font-weight: 800;
+  color: var(--game-white);
+  -webkit-text-stroke: 3px var(--game-navy);
+  paint-order: stroke fill;
+  text-shadow:
+    0 3px 0 var(--game-gold),
+    0 7px 12px rgba(0, 0, 0, 0.35);
+  letter-spacing: 0.02em;
+}
+
+.game-text-event {
+  font-family: var(--font-game), sans-serif;
+  font-weight: 800;
+  color: var(--game-yellow);
+  -webkit-text-stroke: 2.5px var(--game-navy);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* ===== Animation presets — transform/opacity only, GPU-friendly ===== */
+@keyframes game-pop {
+  0% { opacity: 0; transform: scale(0.7); }
+  60% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes game-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes game-slam {
+  0% { opacity: 0; transform: scale(2) rotate(-6deg); }
+  60% { opacity: 1; transform: scale(0.95) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes game-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+@keyframes game-float {
+  0% { opacity: 0; transform: translateY(0); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-28px); }
+}
+@keyframes game-flash {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.35); }
+}
+@keyframes game-zoom {
+  0% { opacity: 0; transform: scale(0.4); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes game-press {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.94); }
+  70% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.anim-pop { animation: game-pop var(--game-dur-result) var(--game-ease-pop) both; }
+.anim-bounce { animation: game-bounce 1.1s ease-in-out infinite; }
+.anim-slam { animation: game-slam var(--game-dur-event) var(--game-ease-pop) both; }
+.anim-shake { animation: game-shake 0.5s ease-in-out; }
+.anim-float { animation: game-float 1.6s ease-out both; }
+.anim-flash { animation: game-flash 0.6s ease-in-out; }
+.anim-zoom { animation: game-zoom var(--game-dur-ui) var(--game-ease-pop) both; }
+.anim-press:active { animation: game-press 260ms var(--game-ease-pop); }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-pop, .anim-bounce, .anim-slam, .anim-shake, .anim-float, .anim-flash, .anim-zoom, .anim-press:active {
+    animation: none !important;
+  }
+}
