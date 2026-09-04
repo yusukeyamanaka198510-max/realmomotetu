@@ -7,6 +7,7 @@ import { CardPanel, type OwnedCard } from "./CardPanel";
 import { BonusMissionPanel } from "./BonusMissionPanel";
 import { MISSION_DEFAULT_REWARD, type MissionDifficulty, type TeamGameState } from "@/lib/game/types";
 import { PasswordChangePanel } from "@/components/PasswordChangePanel";
+import { TeamNameChangePanel } from "./TeamNameChangePanel";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { StatusHeader } from "./StatusHeader";
 import { CardSlotOverlay } from "./CardSlotOverlay";
@@ -255,6 +256,7 @@ export default async function TeamPage() {
       />
       {event && <CountdownTimer eventId={event.id} endAt={event.end_at} status={event.status} />}
       <PasswordChangePanel />
+      <TeamNameChangePanel currentName={actor.teamName} />
 
       <CardSlotOverlay notifications={notifications ?? []} />
       <DestinationArrivalOverlay notifications={notifications ?? []} />
