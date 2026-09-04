@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { GameBadge, GamePanel } from "@/components/game-ui";
 
@@ -15,6 +15,8 @@ export function Leaderboard({ eventId }: { eventId: string }) {
   const [goals, setGoals] = useState<GoalRow[]>([]);
   const [myRankDelta, setMyRankDelta] = useState<"up" | "down" | null>(null);
   const prevMyRankRef = useRef<number | null>(null);
+  const myRowRef = useRef<HTMLLIElement | null>(null);
+  const prevMyRowTopRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -57,6 +59,27 @@ export function Leaderboard({ eventId }: { eventId: string }) {
     };
   }, [eventId, load]);
 
+  // 自チームの行が順位変動でDOM上の位置を変えた瞬間、旧位置からのオフセットを一旦適用してから
+  // transform:none へアニメーションさせる(FLIP)。動いたことを視覚的に伝えるための演出のみで、
+  // 順位データそのものには一切影響しない。
+  useLayoutEffect(() => {
+    const el = myRowRef.current;
+    if (!el) return;
+    const newTop = el.getBoundingClientRect().top;
+    if (prevMyRowTopRef.current !== null) {
+      const delta = prevMyRowTopRef.current - newTop;
+      if (delta !== 0) {
+        el.style.transition = "none";
+        el.style.transform = `translateY(${delta}px)`;
+        requestAnimationFrame(() => {
+          el.style.transition = "transform 450ms cubic-bezier(0.34, 1.56, 0.64, 1)";
+          el.style.transform = "translateY(0)";
+        });
+      }
+    }
+    prevMyRowTopRef.current = newTop;
+  }, [rows]);
+
   if (!visible) {
     return (
       <div className="mt-6 rounded border border-zinc-200 p-4 text-center text-sm text-zinc-500 dark:border-zinc-800">
@@ -84,10 +107,13 @@ export function Leaderboard({ eventId }: { eventId: string }) {
             const barPct = Math.max(4, Math.round((r.coin_balance_cache / maxCoin) * 100));
             return (
               <li
-                key={`${r.rank}-${i}`}
-                className={`relative overflow-hidden rounded-xl px-3 py-2 transition-transform ${
+                key={r.is_mine ? "mine" : `other-${i}`}
+                ref={r.is_mine ? myRowRef : undefined}
+                className={`relative overflow-hidden rounded-xl px-3 py-2 ${
                   r.is_mine
-                    ? "scale-[1.02] bg-amber-100 font-semibold ring-2 ring-game-gold dark:bg-amber-950 dark:ring-amber-600"
+                    ? `scale-[1.02] bg-amber-100 font-semibold ring-2 ring-game-gold dark:bg-amber-950 dark:ring-amber-600 ${
+                        myRankDelta ? "shadow-[0_0_16px_rgba(245,166,35,0.7)]" : ""
+                      }`
                     : "bg-zinc-50 dark:bg-zinc-800/60"
                 }`}
               >
