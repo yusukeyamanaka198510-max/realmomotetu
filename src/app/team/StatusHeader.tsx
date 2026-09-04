@@ -39,6 +39,7 @@ export function StatusHeader({
   transitLabel,
   nextStationName,
   destinationStationName,
+  currentGoalDistance,
   activeEffects,
 }: {
   teamName: string;
@@ -50,6 +51,7 @@ export function StatusHeader({
   transitLabel: string | null;
   nextStationName: string | null;
   destinationStationName: string | null;
+  currentGoalDistance: number | null;
   activeEffects: { id: string; effect_type: string }[];
 }) {
   const actionLabel = isEventOver ? "ゲーム終了" : isEventScheduled ? "本部の開始を待っています" : ACTION_LABEL[state] ?? state;
@@ -80,13 +82,23 @@ export function StatusHeader({
             )}
           </p>
           {transitLabel && nextStationName && <p className="text-[11px] text-sky-700 dark:text-sky-300">({transitLabel})</p>}
+          {!transitLabel && currentGoalDistance !== null && (
+            <p className="text-[11px] font-bold text-sky-700 dark:text-sky-300">
+              {currentGoalDistance === 0 ? "🏁 ゴール駅!" : `ゴールまで ${currentGoalDistance}マス`}
+            </p>
+          )}
         </div>
       </div>
 
       {destinationStationName && (
         <div className="mt-2 flex items-center justify-between rounded-xl border-2 border-dashed border-game-gold/60 bg-amber-50 px-3 py-2 text-sm dark:bg-amber-950/40">
           <span className="font-bold text-amber-700 dark:text-amber-300">目的地(ゴール)</span>
-          <span className="font-black text-game-gold">🏁 {destinationStationName}</span>
+          <span className="font-black text-game-gold">
+            🏁 {destinationStationName}
+            {currentGoalDistance !== null && currentGoalDistance > 0 && (
+              <span className="ml-1 text-xs font-bold text-amber-600">(あと{currentGoalDistance}マス)</span>
+            )}
+          </span>
         </div>
       )}
 

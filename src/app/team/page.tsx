@@ -74,6 +74,20 @@ export default async function TeamPage() {
     }
   }
 
+  let goalDistanceByStationId: Record<string, number> = {};
+  if (event?.active_destination_station_id) {
+    const { data: distances } = await supabase.rpc("fn_station_distances_from", {
+      p_from: event.active_destination_station_id,
+    });
+    goalDistanceByStationId = Object.fromEntries(
+      (distances ?? []).map((d: { station_id: string; hops: number }) => [d.station_id, d.hops])
+    );
+  }
+  const currentGoalDistance: number | null =
+    state?.current_station_id && goalDistanceByStationId[state.current_station_id] !== undefined
+      ? goalDistanceByStationId[state.current_station_id]
+      : null;
+
   let missionAttempt: {
     id: string;
     offered_mission_ids: string[];
@@ -236,6 +250,7 @@ export default async function TeamPage() {
         transitLabel={isInTransit ? transitLabel : null}
         nextStationName={isInTransit ? nextStationName : null}
         destinationStationName={destinationStationName}
+        currentGoalDistance={currentGoalDistance}
         activeEffects={activeEffects ?? []}
       />
       {event && <CountdownTimer eventId={event.id} endAt={event.end_at} status={event.status} />}
@@ -253,6 +268,7 @@ export default async function TeamPage() {
         offeredMissions={offeredMissions}
         diceResult={diceResult}
         reachableStations={reachableStations}
+        goalDistanceByStationId={goalDistanceByStationId}
         properties={properties}
         isEventOver={isEventOver}
         isEventScheduled={isEventScheduled}

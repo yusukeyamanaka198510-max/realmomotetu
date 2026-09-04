@@ -41,6 +41,7 @@ export function TeamGameFlow({
   offeredMissions,
   diceResult,
   reachableStations,
+  goalDistanceByStationId,
   properties,
   isEventOver,
   isEventScheduled,
@@ -53,6 +54,7 @@ export function TeamGameFlow({
   offeredMissions: OfferedMission[];
   diceResult: DiceResult | null;
   reachableStations: ReachableStation[];
+  goalDistanceByStationId: Record<string, number>;
   properties: Property[];
   isEventOver: boolean;
   isEventScheduled: boolean;
@@ -544,16 +546,27 @@ export function TeamGameFlow({
             <p className="text-sm text-zinc-500">「{stationQuery}」に一致する駅はありません</p>
           )}
           <div className="grid max-h-[50vh] grid-cols-2 gap-2 overflow-y-auto">
-            {filteredStations.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => handleSelectDestination(s.id, s.name)}
-                disabled={busy}
-                className="anim-press rounded-xl border-2 border-sky-300 bg-sky-50 p-3 text-sm font-bold text-sky-900 transition-transform hover:-translate-y-0.5 hover:border-game-skyblue disabled:opacity-50 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100"
-              >
-                {s.name}
-              </button>
-            ))}
+            {filteredStations.map((s) => {
+              const dist = goalDistanceByStationId[s.id];
+              const isGoal = dist === 0;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => handleSelectDestination(s.id, s.name)}
+                  disabled={busy}
+                  className={`anim-press rounded-xl border-2 p-3 text-left text-sm font-bold transition-transform hover:-translate-y-0.5 disabled:opacity-50 ${
+                    isGoal
+                      ? "border-game-gold bg-amber-50 text-amber-900 hover:border-game-gold dark:bg-amber-950 dark:text-amber-100"
+                      : "border-sky-300 bg-sky-50 text-sky-900 hover:border-game-skyblue dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100"
+                  }`}
+                >
+                  <span className="block">{s.name}</span>
+                  <span className={`mt-0.5 block text-[10px] font-normal ${isGoal ? "text-amber-600" : "text-zinc-500 dark:text-zinc-400"}`}>
+                    {dist === undefined ? "" : isGoal ? "🏁 ここがゴール!" : `ゴールまで ${dist}マス`}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
