@@ -243,6 +243,7 @@ export default async function TeamPage() {
       <GameStartIntro isRunning={!!event && event.status === "RUNNING" && !isEventOver} />
       <StatusHeader
         teamName={actor.teamName}
+        representativeName={actor.representativeName}
         state={(state?.state ?? "WAITING") as TeamGameState}
         isEventOver={isEventOver}
         isEventScheduled={isEventScheduled}
@@ -256,7 +257,7 @@ export default async function TeamPage() {
       />
       {event && <CountdownTimer eventId={event.id} endAt={event.end_at} status={event.status} />}
       <PasswordChangePanel />
-      <TeamNameChangePanel currentName={actor.teamName} />
+      <TeamNameChangePanel currentName={actor.teamName} currentRepresentativeName={actor.representativeName} />
 
       <CardSlotOverlay notifications={notifications ?? []} />
       <DestinationArrivalOverlay notifications={notifications ?? []} />

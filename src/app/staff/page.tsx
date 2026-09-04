@@ -29,7 +29,7 @@ export default async function StaffPage() {
   const { data: teams } = await supabase
     .from("teams")
     .select(
-      "id, team_number, team_name, team_state(state, current_station_id, coin_balance_cache, is_paused, updated_at, current_station:current_station_id(name))"
+      "id, team_number, team_name, representative_name, team_state(state, current_station_id, coin_balance_cache, is_paused, updated_at, current_station:current_station_id(name))"
     )
     .eq("event_id", actor.eventId)
     .order("team_number");
@@ -150,6 +150,7 @@ export default async function StaffPage() {
     return {
       id: t.id,
       team_name: t.team_name,
+      representative_name: t.representative_name,
       state: ts?.state ?? "WAITING",
       coin_balance_cache: ts?.coin_balance_cache ?? 0,
       currentStationName: ts?.current_station?.name ?? "-",
@@ -191,6 +192,7 @@ export default async function StaffPage() {
             <tr className="border-b text-left">
               <th className="py-2">No</th>
               <th>チーム名</th>
+              <th>代表者</th>
               <th>現在地</th>
               <th>state</th>
               <th>コイン</th>
@@ -209,6 +211,7 @@ export default async function StaffPage() {
                 >
                   <td className="py-2">{i + 1}</td>
                   <td>{t.team_name}</td>
+                  <td className="text-zinc-500">{t.representative_name ?? "-"}</td>
                   <td>{t.currentStationName}</td>
                   <td className={highlight ? "font-semibold" : ""}>{t.state}</td>
                   <td>{t.coin_balance_cache.toLocaleString()}</td>

@@ -31,6 +31,7 @@ const EFFECT_LABEL: Record<string, { label: string; tone: "bad" | "good" }> = {
 
 export function StatusHeader({
   teamName,
+  representativeName,
   state,
   isEventOver,
   isEventScheduled,
@@ -43,6 +44,7 @@ export function StatusHeader({
   activeEffects,
 }: {
   teamName: string;
+  representativeName: string | null;
   state: TeamGameState;
   isEventOver: boolean;
   isEventScheduled: boolean;
@@ -59,7 +61,10 @@ export function StatusHeader({
   return (
     <GamePanel accent="gold" className="border-2 border-game-navy/10">
       <div className="flex items-center justify-between">
-        <h1 className="font-game text-lg font-black text-game-navy dark:text-game-gold">🚃 {teamName}</h1>
+        <h1 className="font-game text-lg font-black text-game-navy dark:text-game-gold">
+          🚃 {teamName}
+          {representativeName && <span className="ml-1.5 text-sm font-bold text-zinc-400">({representativeName})</span>}
+        </h1>
       </div>
 
       {!isEventOver && (

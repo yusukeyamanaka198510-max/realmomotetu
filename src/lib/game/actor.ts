@@ -3,7 +3,7 @@ import type { StaffRole } from "@/lib/game/types";
 
 export type Actor =
   | { kind: "staff"; userId: string; eventId: string; role: StaffRole; displayName: string }
-  | { kind: "team"; userId: string; eventId: string; teamId: string; teamName: string }
+  | { kind: "team"; userId: string; eventId: string; teamId: string; teamName: string; representativeName: string | null }
   | { kind: "anonymous" };
 
 // ログイン中ユーザーがstaffかteamかを判定する。API/Server Actionの入口で必ず呼び、
@@ -34,7 +34,7 @@ export async function getActor(): Promise<Actor> {
 
   const { data: team } = await supabase
     .from("teams")
-    .select("id, event_id, team_name")
+    .select("id, event_id, team_name, representative_name")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
@@ -45,6 +45,7 @@ export async function getActor(): Promise<Actor> {
       eventId: team.event_id,
       teamId: team.id,
       teamName: team.team_name,
+      representativeName: team.representative_name,
     };
   }
 
