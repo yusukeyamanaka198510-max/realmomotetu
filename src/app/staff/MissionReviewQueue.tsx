@@ -38,8 +38,11 @@ export function MissionReviewQueue({
         () => router.refresh()
       )
       .subscribe();
+    // Realtime切断時に新着提出を見逃さないためのフォールバック。
+    const interval = setInterval(() => router.refresh(), 15000);
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, [eventId, router]);
 

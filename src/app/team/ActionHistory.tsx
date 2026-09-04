@@ -88,8 +88,12 @@ export function ActionHistory({ teamId }: { teamId: string }) {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "coin_ledger", filter: `team_id=eq.${teamId}` }, load)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "card_usage_log", filter: `team_id=eq.${teamId}` }, load)
       .subscribe();
+    // このコンポーネントはpage.tsxのpropsではなく自前でデータ取得しているため、
+    // 他コンポーネントのrouter.refresh()では追従しない。Realtime切断時の保険として定期再取得する。
+    const interval = setInterval(load, 20000);
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, [teamId, load]);
 

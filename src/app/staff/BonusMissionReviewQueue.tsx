@@ -29,8 +29,11 @@ export function BonusMissionReviewQueue({ eventId, initialItems }: { eventId: st
       .channel(`bonus_mission_review_queue:${eventId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "review_queue", filter: `event_id=eq.${eventId}` }, () => router.refresh())
       .subscribe();
+    // Realtime切断時に新着提出を見逃さないためのフォールバック。
+    const interval = setInterval(() => router.refresh(), 15000);
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, [eventId, router]);
 

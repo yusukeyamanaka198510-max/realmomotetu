@@ -124,8 +124,12 @@ export function TeamGameFlow({
         () => router.refresh()
       )
       .subscribe();
+    // Realtimeが本番回線の瞬断等で切れた場合に備え、ポーリングでも状態を追従させる
+    // (本部の承認待ち等でRealtimeだけに頼ると、切断中は画面が固まって見えてしまうため)。
+    const interval = setInterval(() => router.refresh(), 15000);
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(interval);
     };
   }, [teamId, router]);
 
