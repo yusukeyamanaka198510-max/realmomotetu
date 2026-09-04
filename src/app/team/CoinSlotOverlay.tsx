@@ -5,7 +5,15 @@ import { formatYen } from "@/lib/game/format";
 
 const DECOY_AMOUNTS = [10000000, 15000000, 20000000, 25000000, 30000000];
 
-export function CoinSlotOverlay({ amount, onDone }: { amount: number; onDone: () => void }) {
+export function CoinSlotOverlay({
+  amount,
+  bonusAmount,
+  onDone,
+}: {
+  amount: number;
+  bonusAmount?: number;
+  onDone: () => void;
+}) {
   const [spinning, setSpinning] = useState(true);
   const [reelAmount, setReelAmount] = useState(DECOY_AMOUNTS[0]);
 
@@ -42,6 +50,11 @@ export function CoinSlotOverlay({ amount, onDone }: { amount: number; onDone: ()
             {spinning ? formatYen(reelAmount) : formatYen(amount)}
           </p>
         </div>
+        {!spinning && !!bonusAmount && (
+          <p className="anim-pop relative mt-2 rounded-full bg-gradient-to-b from-amber-300 to-game-gold px-3 py-1 text-xs font-black text-amber-950">
+            💰お金の神様ボーナス +{formatYen(bonusAmount)}!
+          </p>
+        )}
         {!spinning && (
           <button
             onClick={onDone}

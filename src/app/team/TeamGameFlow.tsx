@@ -71,7 +71,8 @@ export function TeamGameFlow({
   const [dicePhase, setDicePhase] = useState<DicePhase | "done" | null>(null);
   const [missionFailureToast, setMissionFailureToast] = useState(false);
   const [coinSlotResult, setCoinSlotResult] = useState<number | null>(null);
-  const [pendingReward, setPendingReward] = useState<{ choice: "CARD" | "COIN"; amount?: number } | null>(null);
+  const [pendingReward, setPendingReward] = useState<{ choice: "CARD" | "COIN"; amount?: number; money_god_bonus?: number } | null>(null);
+  const [moneyGodBonus, setMoneyGodBonus] = useState<number | null>(null);
   const [bombiiEncounter, setBombiiEncounter] = useState<{ type: string; amount: number; percent?: number } | null>(null);
   const [bombiiEscapeResult, setBombiiEscapeResult] = useState<{ roll: number; escaped: boolean; new_holder_team_name?: string } | null>(null);
   const selectedMission = offeredMissions.find((m) => m.id === missionAttempt?.selected_mission_id) ?? null;
@@ -309,9 +310,14 @@ export function TeamGameFlow({
     }
   }
 
-  function revealReward(choice: "CARD" | "COIN", data: { amount?: number }) {
+  function revealReward(choice: "CARD" | "COIN", data: { amount?: number; money_god_bonus?: number }) {
     if (choice === "COIN") {
       setCoinSlotResult(data.amount ?? 0);
+      setMoneyGodBonus(data.money_god_bonus ?? null);
+    } else if (data.money_god_bonus) {
+      // カード選択時でもお金の神様ボーナスは発生しうる。専用のコイン獲得演出で見せる。
+      setCoinSlotResult(0);
+      setMoneyGodBonus(data.money_god_bonus);
     } else {
       // カードの結果はcard_notifications経由の既存CardSlotOverlayが表示するため、
       // ここではpage.tsxのデータを更新するだけでよい。
@@ -329,10 +335,10 @@ export function TeamGameFlow({
       setError(error.message);
       return;
     }
-    const result = data as { amount?: number; bombii?: { type: string; amount: number; percent?: number } };
+    const result = data as { amount?: number; money_god_bonus?: number; bombii?: { type: string; amount: number; percent?: number } };
     if (result.bombii) {
       // ボンビーの悪さが発生した場合は先にその演出を見せ、確認後に本来の報酬を表示する。
-      setPendingReward({ choice, amount: result.amount });
+      setPendingReward({ choice, amount: result.amount, money_god_bonus: result.money_god_bonus });
       setBombiiEncounter(result.bombii);
     } else {
       revealReward(choice, result);
@@ -378,8 +384,10 @@ export function TeamGameFlow({
       {coinSlotResult !== null && (
         <CoinSlotOverlay
           amount={coinSlotResult}
+          bonusAmount={moneyGodBonus ?? undefined}
           onDone={() => {
             setCoinSlotResult(null);
+            setMoneyGodBonus(null);
             router.refresh();
           }}
         />
