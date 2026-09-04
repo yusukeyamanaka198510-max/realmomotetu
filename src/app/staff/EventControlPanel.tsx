@@ -13,6 +13,8 @@ type EventInfo = {
   time_limit_minutes: number | null;
   leaderboard_hide_minutes_before_end: number;
   obstruction_cooldown_seconds: number;
+  dividend_interval_minutes: number;
+  last_dividend_run_at: string | null;
 };
 
 // datetime-local入力用にローカルタイムゾーンの "YYYY-MM-DDTHH:mm" 形式へ変換
@@ -37,6 +39,7 @@ export function EventControlPanel({
   const [endAtInput, setEndAtInput] = useState(toDatetimeLocalValue(event.end_at));
   const [nameDraft, setNameDraft] = useState(event.name);
   const [cooldownSeconds, setCooldownSeconds] = useState(event.obstruction_cooldown_seconds);
+  const [dividendMinutes, setDividendMinutes] = useState(event.dividend_interval_minutes);
 
   useEffect(() => {
     const supabase = createClient();
@@ -93,6 +96,25 @@ export function EventControlPanel({
     setBusy(true);
     const supabase = createClient();
     const { error } = await supabase.rpc("fn_admin_force_end_event", { p_reason: reason });
+    setBusy(false);
+    if (error) return window.alert(error.message);
+    router.refresh();
+  }
+
+  async function handleSaveDividendInterval() {
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_set_dividend_interval", { p_minutes: dividendMinutes });
+    setBusy(false);
+    if (error) return window.alert(error.message);
+    router.refresh();
+  }
+
+  async function handleRunDividendNow() {
+    if (!window.confirm("今すぐ全チームに定期配当を実行します。よろしいですか?")) return;
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_run_dividend_settlement_now");
     setBusy(false);
     if (error) return window.alert(error.message);
     router.refresh();
@@ -207,6 +229,37 @@ export function EventControlPanel({
         >
           保存
         </button>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
+        <span>不動産の定期配当間隔</span>
+        <input
+          type="number"
+          min={0}
+          value={dividendMinutes}
+          onChange={(e) => setDividendMinutes(Number(e.target.value))}
+          className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+        />
+        <span>分ごと(0=自動実行を停止)</span>
+        <button
+          onClick={handleSaveDividendInterval}
+          disabled={busy}
+          className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700"
+        >
+          保存
+        </button>
+        <button
+          onClick={handleRunDividendNow}
+          disabled={busy}
+          className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          📈今すぐ配当を実行
+        </button>
+        {event.last_dividend_run_at && (
+          <span className="w-full text-xs text-zinc-500">
+            前回実行: {new Date(event.last_dividend_run_at).toLocaleString("ja-JP")}
+          </span>
+        )}
       </div>
 
       {isEnded && topTeams.length === 1 && (

@@ -115,9 +115,14 @@ export function TeamGameFlow({
         () => router.refresh()
       )
       .subscribe();
+    supabase.rpc("fn_maybe_run_dividend_settlement");
     // Realtimeが本番回線の瞬断等で切れた場合に備え、ポーリングでも状態を追従させる
     // (本部の承認待ち等でRealtimeだけに頼ると、切断中は画面が固まって見えてしまうため)。
-    const interval = setInterval(() => router.refresh(), 15000);
+    // 同じポーリングに乗せて、定期配当の「間隔を過ぎていれば実行」判定も軽く叩く。
+    const interval = setInterval(() => {
+      supabase.rpc("fn_maybe_run_dividend_settlement");
+      router.refresh();
+    }, 15000);
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);

@@ -12,6 +12,7 @@ import { CountdownTimer } from "@/components/CountdownTimer";
 import { StatusHeader } from "./StatusHeader";
 import { CardSlotOverlay } from "./CardSlotOverlay";
 import { DestinationArrivalOverlay } from "./DestinationArrivalOverlay";
+import { DividendAnnouncementOverlay } from "./DividendAnnouncementOverlay";
 import { GameStartIntro } from "./GameStartIntro";
 import { ActionHistory } from "./ActionHistory";
 import { TeamPositionMap, type LineTopology } from "./TeamPositionMap";
@@ -269,6 +270,7 @@ export default async function TeamPage() {
 
       <CardSlotOverlay notifications={notifications ?? []} />
       <DestinationArrivalOverlay notifications={notifications ?? []} />
+      <DividendAnnouncementOverlay notifications={notifications ?? []} />
 
       <TeamGameFlow
         teamId={actor.teamId}
@@ -299,7 +301,9 @@ export default async function TeamPage() {
         ownProperties={properties}
       />
 
-      <Leaderboard eventId={actor.eventId} />
+      <div id="leaderboard">
+        <Leaderboard eventId={actor.eventId} />
+      </div>
 
       <TeamPositionMap lines={lineTopologies} stationNames={stationNames} />
 
