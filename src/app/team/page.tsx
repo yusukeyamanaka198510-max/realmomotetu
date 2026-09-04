@@ -159,6 +159,13 @@ export default async function TeamPage() {
     properties = data ?? [];
   }
 
+  const { data: myPropertyPurchases } = await supabase
+    .from("team_property_purchases")
+    .select("price_paid")
+    .eq("team_id", actor.teamId)
+    .eq("settled", false);
+  const propertyAssetTotal = (myPropertyPurchases ?? []).reduce((sum, p) => sum + p.price_paid, 0);
+
   const { data: myCardsRaw } = await supabase
     .from("team_cards")
     .select("card_id, quantity, card:card_id(card_code, name, category, rarity, description, effect_type, target_type)")
@@ -253,6 +260,7 @@ export default async function TeamPage() {
         nextStationName={isInTransit ? nextStationName : null}
         destinationStationName={destinationStationName}
         currentGoalDistance={currentGoalDistance}
+        propertyAssetTotal={propertyAssetTotal}
         activeEffects={activeEffects ?? []}
       />
       {event && <CountdownTimer eventId={event.id} endAt={event.end_at} status={event.status} />}
@@ -272,6 +280,7 @@ export default async function TeamPage() {
         diceResult={diceResult}
         reachableStations={reachableStations}
         goalDistanceByStationId={goalDistanceByStationId}
+        coinBalance={state?.coin_balance_cache ?? 0}
         properties={properties}
         isEventOver={isEventOver}
         isEventScheduled={isEventScheduled}

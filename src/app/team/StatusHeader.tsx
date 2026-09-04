@@ -1,6 +1,8 @@
+import Link from "next/link";
 import type { TeamGameState } from "@/lib/game/types";
 import { CoinDisplay } from "./CoinDisplay";
 import { GameBadge, GamePanel } from "@/components/game-ui";
+import { formatYen } from "@/lib/game/format";
 
 const ACTION_LABEL: Record<TeamGameState, string> = {
   WAITING: "本部の開始を待っています",
@@ -42,6 +44,7 @@ export function StatusHeader({
   nextStationName,
   destinationStationName,
   currentGoalDistance,
+  propertyAssetTotal,
   activeEffects,
 }: {
   teamName: string;
@@ -55,6 +58,7 @@ export function StatusHeader({
   nextStationName: string | null;
   destinationStationName: string | null;
   currentGoalDistance: number | null;
+  propertyAssetTotal: number;
   activeEffects: { id: string; effect_type: string }[];
 }) {
   const actionLabel = isEventOver ? "ゲーム終了" : isEventScheduled ? "本部の開始を待っています" : ACTION_LABEL[state] ?? state;
@@ -66,6 +70,9 @@ export function StatusHeader({
           🚃 {teamName}
           {representativeName && <span className="ml-1.5 text-sm font-bold text-zinc-400">({representativeName})</span>}
         </h1>
+        <Link href="/team/mypage" className="shrink-0 rounded-full border-2 border-zinc-300 px-2.5 py-1 text-xs font-bold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
+          マイページ
+        </Link>
       </div>
 
       {!isEventOver && (
@@ -76,24 +83,29 @@ export function StatusHeader({
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
         <CoinDisplay balance={coinBalance} />
-        <div className="rounded-xl bg-sky-50 px-3 py-2 dark:bg-sky-950">
-          <p className="text-[11px] font-bold text-sky-700 dark:text-sky-300">現在地</p>
-          <p className="truncate text-base font-semibold text-sky-900 dark:text-sky-100">
-            {transitLabel && nextStationName ? (
-              <>
-                {currentStationName ?? "-"}→{nextStationName}
-              </>
-            ) : (
-              currentStationName ?? "-"
-            )}
-          </p>
-          {transitLabel && nextStationName && <p className="text-[11px] text-sky-700 dark:text-sky-300">({transitLabel})</p>}
-          {!transitLabel && currentGoalDistance !== null && (
-            <p className="text-[11px] font-bold text-sky-700 dark:text-sky-300">
-              {currentGoalDistance === 0 ? "🏁 ゴール駅!" : `ゴールまで ${currentGoalDistance}マス`}
-            </p>
-          )}
+        <div className="rounded-xl bg-gradient-to-b from-emerald-50 to-emerald-100 px-3 py-2 dark:from-emerald-950 dark:to-emerald-900">
+          <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">🏠不動産資産額</p>
+          <p className="text-lg font-black tabular-nums text-emerald-700 dark:text-emerald-300">{formatYen(propertyAssetTotal)}</p>
         </div>
+      </div>
+
+      <div className="mt-2 rounded-xl bg-sky-50 px-3 py-2 text-sm dark:bg-sky-950">
+        <p className="text-[11px] font-bold text-sky-700 dark:text-sky-300">現在地</p>
+        <p className="truncate text-base font-semibold text-sky-900 dark:text-sky-100">
+          {transitLabel && nextStationName ? (
+            <>
+              {currentStationName ?? "-"}→{nextStationName}
+            </>
+          ) : (
+            currentStationName ?? "-"
+          )}
+        </p>
+        {transitLabel && nextStationName && <p className="text-[11px] text-sky-700 dark:text-sky-300">({transitLabel})</p>}
+        {!transitLabel && currentGoalDistance !== null && (
+          <p className="text-[11px] font-bold text-sky-700 dark:text-sky-300">
+            {currentGoalDistance === 0 ? "🏁 ゴール駅!" : `ゴールまで ${currentGoalDistance}マス`}
+          </p>
+        )}
       </div>
 
       {destinationStationName && (

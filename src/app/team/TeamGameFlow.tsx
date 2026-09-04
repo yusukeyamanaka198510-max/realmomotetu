@@ -44,6 +44,7 @@ export function TeamGameFlow({
   reachableStations,
   goalDistanceByStationId,
   properties,
+  coinBalance,
   isEventOver,
   isEventScheduled,
 }: {
@@ -55,6 +56,7 @@ export function TeamGameFlow({
   offeredMissions: OfferedMission[];
   diceResult: DiceResult | null;
   reachableStations: ReachableStation[];
+  coinBalance: number;
   goalDistanceByStationId: Record<string, number>;
   properties: Property[];
   isEventOver: boolean;
@@ -492,18 +494,22 @@ export function TeamGameFlow({
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             この駅の物件です。購入すると代金が引かれ、ゲーム終了時に代金+利回りが資産に戻ります。
           </p>
-          {properties.map((p) => (
-            <div key={p.id} className="rounded border border-zinc-300 p-3 text-sm dark:border-zinc-700">
-              <p className="font-medium">{p.name}</p>
-              <p className="mt-1 text-zinc-600 dark:text-zinc-400">{p.description}</p>
-              <p className="mt-1">
-                価格: {formatYen(p.price)} / 利回り: +{formatYen(p.yield_amount)}
-              </p>
-              <GameButton onClick={() => handlePurchaseProperty(p.id, p.name)} disabled={busy} variant="card" className="mt-2 w-full">
-                🏠 購入する
-              </GameButton>
-            </div>
-          ))}
+          {properties.map((p) => {
+            const affordable = coinBalance >= p.price;
+            return (
+              <div key={p.id} className="rounded border border-zinc-300 p-3 text-sm dark:border-zinc-700">
+                <p className="font-medium">{p.name}</p>
+                <p className="mt-1 text-zinc-600 dark:text-zinc-400">{p.description}</p>
+                <p className={`mt-1 ${affordable ? "" : "font-bold text-game-red"}`}>
+                  価格: {formatYen(p.price)} / 利回り: +{formatYen(p.yield_amount)}
+                  {!affordable && " (資産不足)"}
+                </p>
+                <GameButton onClick={() => handlePurchaseProperty(p.id, p.name)} disabled={busy || !affordable} variant="card" className="mt-2 w-full">
+                  🏠 購入する
+                </GameButton>
+              </div>
+            );
+          })}
           {properties.length === 0 && <p className="text-sm text-zinc-500">この駅に物件はありません</p>}
           <button
             onClick={handleFinishPropertyPurchase}
