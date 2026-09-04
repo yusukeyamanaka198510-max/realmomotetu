@@ -70,18 +70,25 @@ export function CardSlotOverlay({ notifications }: { notifications: CardNotifica
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 motion-reduce:transition-none" role="status">
       <div
-        className={`w-64 rounded-[var(--game-radius-lg)] border-4 bg-white p-5 text-center shadow-[var(--game-shadow-lg)] transition-transform dark:bg-zinc-900 ${
-          spinning ? RARITY_RING.NORMAL : `${RARITY_RING[active.rarity]} anim-pop`
+        className={`relative w-64 overflow-hidden rounded-[var(--game-radius-lg)] border-4 bg-white p-5 text-center shadow-[var(--game-shadow-lg)] dark:bg-zinc-900 ${
+          spinning ? RARITY_RING.NORMAL : `${RARITY_RING[active.rarity]} anim-card-fly-in`
         }`}
       >
-        <p className="text-xs font-bold uppercase tracking-wide text-game-purple">🎴カード獲得!</p>
-        <div className="mt-3 flex h-16 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 px-2 dark:bg-zinc-800">
+        {!spinning && (
+          <div
+            className="pointer-events-none absolute inset-y-0 left-0 w-1/3 anim-card-shine"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent)" }}
+            aria-hidden="true"
+          />
+        )}
+        <p className="relative text-xs font-bold uppercase tracking-wide text-game-purple">🎴カード獲得!</p>
+        <div className="relative mt-3 flex h-16 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 px-2 dark:bg-zinc-800">
           <p className={`font-bold ${spinning ? "text-zinc-400 blur-[1px]" : "text-lg text-zinc-900 dark:text-zinc-50"}`}>
             {spinning ? reelText : active.name}
           </p>
         </div>
         {!spinning && (
-          <span className={`mt-3 inline-block rounded-full px-3 py-1 text-xs font-bold ${RARITY_BG[active.rarity]}`}>
+          <span className={`relative mt-3 inline-block rounded-full px-3 py-1 text-xs font-bold ${RARITY_BG[active.rarity]}`}>
             {CARD_RARITY_LABELS[active.rarity]}
           </span>
         )}

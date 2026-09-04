@@ -305,9 +305,13 @@ export function TeamGameFlow({
 
   if (isEventOver) {
     return (
-      <div className="mt-6 rounded border border-zinc-300 bg-zinc-900 p-6 text-center text-white dark:border-zinc-700">
-        <p className="text-lg font-bold">ゲーム終了</p>
-        <p className="mt-2 text-sm text-zinc-300">お疲れ様でした。最終結果は本部より発表されます。</p>
+      <div className="anim-pop mt-6 overflow-hidden rounded-[var(--game-radius-lg)] border-4 border-game-gold bg-gradient-to-b from-game-navy to-slate-900 p-8 text-center shadow-[var(--game-shadow-lg)]">
+        <p className="text-4xl">🏁</p>
+        <p className="game-text-event mt-2 text-3xl">ゲーム終了!</p>
+        <p className="mt-3 text-sm font-bold text-white/90">お疲れ様でした!</p>
+        <p className="mt-4 rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-game-gold">
+          🏆 優勝チームの発表は二次会で!お楽しみに
+        </p>
       </div>
     );
   }
