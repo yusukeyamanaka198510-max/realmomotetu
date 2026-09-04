@@ -64,6 +64,7 @@ export function TeamGameFlow({
   const [stationQuery, setStationQuery] = useState("");
   const [dicePhase, setDicePhase] = useState<DicePhase | "done" | null>(null);
   const [missionCelebration, setMissionCelebration] = useState<{ title: string; reward: number } | null>(null);
+  const [missionFailureToast, setMissionFailureToast] = useState(false);
   const selectedMission = offeredMissions.find((m) => m.id === missionAttempt?.selected_mission_id) ?? null;
 
   // ミッション成功の瞬間を検知するため、直前のstateと選択中ミッション情報を覚えておく。
@@ -82,6 +83,11 @@ export function TeamGameFlow({
     if (prev === "MISSION_REVIEW" && (initialState === "DICE_READY" || initialState === "PROPERTY_PURCHASE") && lastMissionRef.current) {
       setMissionCelebration(lastMissionRef.current);
       const timer = setTimeout(() => setMissionCelebration(null), 2600);
+      return () => clearTimeout(timer);
+    }
+    if (prev === "MISSION_REVIEW" && initialState === "MISSION_ACTIVE") {
+      setMissionFailureToast(true);
+      const timer = setTimeout(() => setMissionFailureToast(false), 1800);
       return () => clearTimeout(timer);
     }
   }, [initialState]);
@@ -326,6 +332,14 @@ export function TeamGameFlow({
             <p className="mt-2 text-2xl font-black text-game-gold [text-shadow:0_1px_0_rgba(0,0,0,0.15)]">
               +{missionCelebration.reward.toLocaleString()}円
             </p>
+          </div>
+        </div>
+      )}
+
+      {missionFailureToast && (
+        <div className="anim-shake pointer-events-none fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+          <div className="rounded-full border-2 border-zinc-300 bg-white px-4 py-2 text-sm font-bold shadow-[var(--game-shadow-md)] dark:border-zinc-700 dark:bg-zinc-900">
+            💦 残念! もう一度チャレンジしよう
           </div>
         </div>
       )}
