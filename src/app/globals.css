@@ -136,8 +136,28 @@ body {
 .anim-zoom { animation: game-zoom var(--game-dur-ui) var(--game-ease-pop) both; }
 .anim-press:active { animation: game-press 260ms var(--game-ease-pop); }
 
+@keyframes confetti-fall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(360deg); opacity: 0.85; }
+}
+.anim-confetti-fall { animation: confetti-fall linear forwards; }
+
+@keyframes speedlines-in {
+  0% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+  35% { opacity: 0.85; }
+  100% { opacity: 0; transform: scale(1.5) rotate(6deg); }
+}
+.anim-speedlines { animation: speedlines-in 1s ease-out both; }
+
+@keyframes sparkle-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.4); }
+  50% { opacity: 1; transform: scale(1); }
+}
+.anim-sparkle { animation: sparkle-twinkle 1.1s ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
-  .anim-pop, .anim-bounce, .anim-slam, .anim-shake, .anim-float, .anim-flash, .anim-zoom, .anim-press:active {
+  .anim-pop, .anim-bounce, .anim-slam, .anim-shake, .anim-float, .anim-flash, .anim-zoom, .anim-press:active,
+  .anim-confetti-fall, .anim-speedlines, .anim-sparkle {
     animation: none !important;
   }
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { EVIDENCE_BUCKET, missionPhotoPath } from "@/lib/game/storage";
+import { GameButton, GamePanel } from "@/components/game-ui";
 
 export type BonusMissionAttempt = {
   id: string;
@@ -76,19 +77,18 @@ export function BonusMissionPanel({
   }
 
   return (
-    <div className="mt-6 rounded border border-fuchsia-300 bg-fuchsia-50 p-4 dark:border-fuchsia-800 dark:bg-fuchsia-950">
-      <p className="text-xs font-semibold uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300">ボーナスミッション</p>
-      <p className="mt-1 font-medium">{attempt.title}</p>
+    <GamePanel title="ボーナスミッション" icon="✨" accent="purple" className="mt-6 border-2 border-fuchsia-200 dark:border-fuchsia-900">
+      <p className="font-bold">{attempt.title}</p>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{attempt.description}</p>
-      <p className="mt-1 text-xs text-zinc-500">成功報酬: +{attempt.reward.toLocaleString()}円(通常ミッションとは別に加算)</p>
+      <p className="mt-1 text-xs font-bold text-game-gold">成功報酬: +{attempt.reward.toLocaleString()}円(通常ミッションとは別に加算)</p>
 
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-xs font-bold text-game-red">{error}</p>}
 
       {attempt.status === "PENDING_REVIEW" ? (
         <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">写真を送信しました。本部確認中です…</p>
       ) : (
         <div className="mt-3 space-y-2">
-          <label className="block w-full cursor-pointer rounded border border-dashed border-fuchsia-400 bg-white p-3 text-center text-sm hover:bg-fuchsia-50 dark:bg-transparent dark:hover:bg-fuchsia-900">
+          <label className="block w-full cursor-pointer rounded-xl border-2 border-dashed border-fuchsia-400 bg-white p-3 text-center text-sm hover:bg-fuchsia-50 dark:bg-transparent dark:hover:bg-fuchsia-900">
             <input
               type="file"
               accept="image/*"
@@ -98,15 +98,11 @@ export function BonusMissionPanel({
             />
             {files.length > 0 ? `${files.length}枚選択済み(タップして変更)` : "タップして写真を選択"}
           </label>
-          <button
-            onClick={handleSubmit}
-            disabled={busy || files.length === 0}
-            className="w-full rounded bg-fuchsia-700 py-2 text-sm font-medium text-white disabled:opacity-50"
-          >
-            {busy ? "提出中..." : "ボーナスミッションを提出する"}
-          </button>
+          <GameButton onClick={handleSubmit} disabled={busy || files.length === 0} variant="card" className="w-full">
+            {busy ? "提出中..." : "✨ ボーナスミッションを提出する"}
+          </GameButton>
         </div>
       )}
-    </div>
+    </GamePanel>
   );
 }

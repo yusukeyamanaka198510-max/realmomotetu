@@ -11,6 +11,7 @@ import {
   type CardTargetType,
   type TeamGameState,
 } from "@/lib/game/types";
+import { GameBadge, GameButton, GamePanel } from "@/components/game-ui";
 
 export type OwnedCard = {
   card_id: string;
@@ -204,15 +205,15 @@ export function CardPanel({
   };
 
   return (
-    <div className="mt-6 rounded border border-zinc-200 p-4 dark:border-zinc-800">
+    <GamePanel title={`所持カード(${cards.reduce((s, c) => s + c.quantity, 0)}枚)`} icon="🎴" accent="purple" className="mt-6">
       {usingCard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="status">
           <div
-            className={`w-64 rounded-2xl border-4 bg-white p-5 text-center shadow-2xl dark:bg-zinc-900 ${rarityGlow[usingCard.rarity]} ${
-              usePhase === "activating" ? "animate-[card-charge_0.9s_ease-in-out_infinite]" : "animate-[card-burst_0.5s_ease-out]"
+            className={`w-64 rounded-[var(--game-radius-lg)] border-4 bg-white p-5 text-center shadow-[var(--game-shadow-lg)] dark:bg-zinc-900 ${rarityGlow[usingCard.rarity]} ${
+              usePhase === "activating" ? "animate-[card-charge_0.9s_ease-in-out_infinite]" : "anim-pop"
             }`}
           >
-            <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">
+            <p className="text-xs font-bold uppercase tracking-wide text-game-purple">
               {usePhase === "activating" ? "発動中..." : "発動!"}
             </p>
             <p className="mt-3 text-lg font-bold text-zinc-900 dark:text-zinc-50">{usingCard.name}</p>
@@ -223,51 +224,38 @@ export function CardPanel({
               0%, 100% { transform: scale(1); filter: brightness(1); }
               50% { transform: scale(1.05); filter: brightness(1.15); }
             }
-            @keyframes card-burst {
-              0% { transform: scale(0.9); opacity: 0.7; }
-              50% { transform: scale(1.12); opacity: 1; }
-              100% { transform: scale(1); opacity: 1; }
-            }
           `}</style>
         </div>
       )}
-      <h2 className="text-sm font-semibold">所持カード({cards.reduce((s, c) => s + c.quantity, 0)}枚)</h2>
 
       {visibleNotifications.length > 0 && (
-        <div className="mt-2 space-y-1.5">
+        <div className="mb-2 space-y-1.5">
           {visibleNotifications.slice(0, 3).map((n) =>
             n.message.startsWith("🏁") ? (
               <p
                 key={n.id}
-                className="animate-[goal-pop_0.4s_ease-out] rounded-lg border border-amber-300 bg-amber-100 p-2.5 text-xs font-semibold text-amber-900 shadow-sm dark:border-amber-700 dark:bg-amber-900 dark:text-amber-100"
+                className="anim-pop rounded-xl border-2 border-game-gold bg-amber-100 p-2.5 text-xs font-bold text-amber-900 shadow-[var(--game-shadow-sm)] dark:bg-amber-900 dark:text-amber-100"
               >
                 {n.message}
               </p>
             ) : (
-              <p key={n.id} className="rounded bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              <p key={n.id} className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200">
                 ⚠ {n.message}
               </p>
             )
           )}
-          <style>{`
-            @keyframes goal-pop {
-              0% { opacity: 0; transform: scale(0.9); }
-              60% { opacity: 1; transform: scale(1.03); }
-              100% { opacity: 1; transform: scale(1); }
-            }
-          `}</style>
         </div>
       )}
-      {lastMessage && <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">{lastMessage}</p>}
-      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+      {lastMessage && <p className="mb-2 text-xs font-bold text-game-green">{lastMessage}</p>}
+      {error && <p className="mb-2 text-xs font-bold text-game-red">{error}</p>}
 
-      <div className="mt-2 flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1">
         {CATEGORY_ORDER.filter((c) => (grouped.get(c) ?? []).length > 0).map((c) => (
           <button
             key={c}
             onClick={() => setTab(c)}
-            className={`rounded px-2 py-1 text-xs ${
-              tab === c ? "bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"
+            className={`rounded-full px-2.5 py-1 text-xs font-bold transition-colors ${
+              tab === c ? "bg-game-purple text-white" : "border-2 border-zinc-300 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300"
             }`}
           >
             {CARD_CATEGORY_LABELS[c]}({(grouped.get(c) ?? []).reduce((s, x) => s + x.quantity, 0)})
@@ -280,34 +268,27 @@ export function CardPanel({
         {(grouped.get(tab) ?? []).map((c) => {
           const usable = isLikelyUsable(c, state);
           return (
-            <div key={c.card_id} className="rounded border border-zinc-200 p-2 dark:border-zinc-800">
+            <div
+              key={c.card_id}
+              className={`rounded-xl border-2 border-l-4 bg-white p-2.5 dark:bg-zinc-900 ${
+                c.rarity === "SUPER_RARE" ? "border-purple-300 border-l-game-purple" : c.rarity === "RARE" ? "border-blue-200 border-l-game-blue" : "border-zinc-200 border-l-zinc-400 dark:border-zinc-800"
+              }`}
+            >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">
-                  {c.name} <span className="text-xs text-zinc-400">x{c.quantity}</span>
+                <span className="text-sm font-bold">
+                  {c.name} <span className="text-xs font-normal text-zinc-400">x{c.quantity}</span>
                 </span>
-                <span
-                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                    c.rarity === "SUPER_RARE"
-                      ? "bg-purple-600 text-white"
-                      : c.rarity === "RARE"
-                        ? "bg-blue-600 text-white"
-                        : "bg-zinc-400 text-white"
-                  }`}
-                >
+                <GameBadge tone={c.rarity === "SUPER_RARE" ? "purple" : c.rarity === "RARE" ? "blue" : "navy"}>
                   {CARD_RARITY_LABELS[c.rarity]}
-                </span>
+                </GameBadge>
               </div>
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{c.description}</p>
               {c.effect_type === "BARRIER" ? (
                 <p className="mt-1 text-xs text-zinc-400">所持しているだけで妨害を自動無効化します(使用操作不要)</p>
               ) : (
-                <button
-                  disabled={busy || !usable.ok || c.quantity < 1}
-                  onClick={() => handleUseClick(c)}
-                  className="mt-1 rounded bg-zinc-900 px-3 py-1 text-xs text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
-                >
+                <GameButton disabled={busy || !usable.ok || c.quantity < 1} onClick={() => handleUseClick(c)} variant="card" className="mt-1.5 !px-3 !py-1.5 !text-xs">
                   使用する
-                </button>
+                </GameButton>
               )}
               {!usable.ok && <span className="ml-2 text-xs text-zinc-400">({usable.reason})</span>}
             </div>
@@ -316,8 +297,8 @@ export function CardPanel({
       </div>
 
       {pendingCard && (
-        <div className="mt-3 rounded border border-zinc-300 p-3 dark:border-zinc-700">
-          <p className="text-sm font-medium">{pendingCard.name}を使用</p>
+        <div className="mt-3 rounded-xl border-2 border-zinc-300 p-3 dark:border-zinc-700">
+          <p className="text-sm font-bold">{pendingCard.name}を使用</p>
           {pendingCard.target_type === "OTHER_TEAM" && needsPayload(pendingCard) !== "takeover" && (
             <select
               value={targetTeamId}
@@ -375,22 +356,23 @@ export function CardPanel({
             </select>
           )}
           <div className="mt-2 flex gap-2">
-            <button disabled={busy} onClick={handleConfirmPending} className="rounded bg-zinc-900 px-3 py-1.5 text-xs text-white dark:bg-zinc-50 dark:text-zinc-900">
+            <GameButton disabled={busy} onClick={handleConfirmPending} variant="card" className="!px-3 !py-1.5 !text-xs">
               確定して使用
-            </button>
-            <button
+            </GameButton>
+            <GameButton
               disabled={busy}
               onClick={() => {
                 setPendingCard(null);
                 setError(null);
               }}
-              className="rounded border border-zinc-300 px-3 py-1.5 text-xs dark:border-zinc-700"
+              variant="secondary"
+              className="!px-3 !py-1.5 !text-xs"
             >
               キャンセル
-            </button>
+            </GameButton>
           </div>
         </div>
       )}
-    </div>
+    </GamePanel>
   );
 }

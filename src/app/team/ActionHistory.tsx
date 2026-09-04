@@ -93,9 +93,9 @@ export function ActionHistory({ teamId }: { teamId: string }) {
   }, [teamId, load]);
 
   return (
-    <div className="mt-6 rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <div className="mt-6 rounded-[var(--game-radius-md)] border-2 border-zinc-200 bg-white shadow-[var(--game-shadow-sm)] dark:border-zinc-800 dark:bg-zinc-900">
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between p-4 text-left">
-        <h2 className="text-sm font-bold">アクションログ({items.length}件)</h2>
+        <h2 className="text-sm font-bold">📜アクションログ({items.length}件)</h2>
         <span className="text-xs text-zinc-400">{open ? "▲ 閉じる" : "▼ 開く"}</span>
       </button>
       {open && (
@@ -111,7 +111,7 @@ export function ActionHistory({ teamId }: { teamId: string }) {
                 </span>
               </span>
               {it.amountLabel && (
-                <span className={`shrink-0 font-mono font-semibold ${it.amountTone === "up" ? "text-emerald-600" : "text-red-600"}`}>
+                <span className={`shrink-0 font-mono font-bold ${it.amountTone === "up" ? "text-game-green" : "text-game-red"}`}>
                   {it.amountLabel}
                 </span>
               )}

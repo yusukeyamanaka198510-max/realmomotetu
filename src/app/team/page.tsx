@@ -10,6 +10,8 @@ import { PasswordChangePanel } from "@/components/PasswordChangePanel";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { StatusHeader } from "./StatusHeader";
 import { CardSlotOverlay } from "./CardSlotOverlay";
+import { DestinationArrivalOverlay } from "./DestinationArrivalOverlay";
+import { GameStartIntro } from "./GameStartIntro";
 import { ActionHistory } from "./ActionHistory";
 import { TeamPositionMap, type LineTopology } from "./TeamPositionMap";
 
@@ -223,6 +225,7 @@ export default async function TeamPage() {
 
   return (
     <div className="mx-auto max-w-md p-6">
+      <GameStartIntro isRunning={!!event && event.status === "RUNNING" && !isEventOver} />
       <StatusHeader
         teamName={actor.teamName}
         state={(state?.state ?? "WAITING") as TeamGameState}
@@ -239,6 +242,7 @@ export default async function TeamPage() {
       <PasswordChangePanel />
 
       <CardSlotOverlay notifications={notifications ?? []} />
+      <DestinationArrivalOverlay notifications={notifications ?? []} />
 
       <TeamGameFlow
         teamId={actor.teamId}

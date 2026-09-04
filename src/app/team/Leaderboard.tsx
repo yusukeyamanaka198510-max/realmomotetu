@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { GameBadge, GamePanel } from "@/components/game-ui";
 
 type LeaderboardRow = { rank: number; coin_balance_cache: number; team_name: string | null; is_mine: boolean };
 type GoalRow = { sequence_order: number; station_name: string; team_name: string | null; cleared_at: string };
@@ -68,30 +69,25 @@ export function Leaderboard({ eventId }: { eventId: string }) {
 
   return (
     <div className="mt-6 space-y-4">
-      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold">順位(コイン)</h2>
-          {myRankDelta && (
-            <span
-              className={`animate-[rank-pop_0.5s_ease-out] rounded-full px-2 py-0.5 text-xs font-bold ${
-                myRankDelta === "up"
-                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-200"
-                  : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200"
-              }`}
-            >
-              {myRankDelta === "up" ? "▲ 順位アップ!" : "▼ 順位ダウン"}
+      <GamePanel title="順位(コイン)" icon="🏆" accent="gold">
+        {myRankDelta && (
+          <div className="mb-2 flex justify-end">
+            <span className={myRankDelta === "up" ? "anim-pop" : "anim-shake"}>
+              <GameBadge tone={myRankDelta === "up" ? "green" : "red"}>
+                {myRankDelta === "up" ? "▲ 順位アップ!" : "▼ 順位ダウン"}
+              </GameBadge>
             </span>
-          )}
-        </div>
-        <ul className="mt-3 space-y-1.5 text-sm">
+          </div>
+        )}
+        <ul className="space-y-1.5 text-sm">
           {rows.map((r, i) => {
             const barPct = Math.max(4, Math.round((r.coin_balance_cache / maxCoin) * 100));
             return (
               <li
                 key={`${r.rank}-${i}`}
-                className={`relative overflow-hidden rounded-lg px-3 py-2 transition-transform ${
+                className={`relative overflow-hidden rounded-xl px-3 py-2 transition-transform ${
                   r.is_mine
-                    ? "scale-[1.02] bg-amber-100 font-semibold ring-1 ring-amber-400 dark:bg-amber-950 dark:ring-amber-600"
+                    ? "scale-[1.02] bg-amber-100 font-semibold ring-2 ring-game-gold dark:bg-amber-950 dark:ring-amber-600"
                     : "bg-zinc-50 dark:bg-zinc-800/60"
                 }`}
               >
@@ -106,35 +102,27 @@ export function Leaderboard({ eventId }: { eventId: string }) {
                     </span>
                     {r.is_mine && r.team_name ? `${r.team_name}(あなた)` : r.rank <= 3 ? `${r.rank}位` : ""}
                   </span>
-                  <span className="font-mono tabular-nums">{r.coin_balance_cache.toLocaleString()} コイン</span>
+                  <span className="font-mono tabular-nums text-game-gold">{r.coin_balance_cache.toLocaleString()} コイン</span>
                 </div>
               </li>
             );
           })}
         </ul>
-        <style>{`
-          @keyframes rank-pop {
-            0% { opacity: 0; transform: scale(0.8); }
-            60% { opacity: 1; transform: scale(1.08); }
-            100% { opacity: 1; transform: scale(1); }
-          }
-        `}</style>
-      </div>
+      </GamePanel>
 
       {goals.length > 0 && (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="text-sm font-bold">ゴール到達状況</h2>
-          <ul className="mt-3 space-y-1.5 text-sm">
+        <GamePanel title="ゴール到達状況" icon="🚩" accent="navy">
+          <ul className="space-y-1.5 text-sm">
             {goals.map((g) => (
-              <li key={g.sequence_order} className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-800/60">
+              <li key={g.sequence_order} className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2 dark:bg-zinc-800/60">
                 <span className="text-zinc-600 dark:text-zinc-300">
                   🚩第{g.sequence_order}ゴール<span className="text-zinc-400">({g.station_name})</span>
                 </span>
-                <span className="font-semibold">{g.team_name ?? "-"}</span>
+                <span className="font-bold">{g.team_name ?? "-"}</span>
               </li>
             ))}
           </ul>
-        </div>
+        </GamePanel>
       )}
     </div>
   );
