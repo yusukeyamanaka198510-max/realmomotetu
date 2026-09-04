@@ -46,6 +46,7 @@ export function StatusHeader({
   currentGoalDistance,
   propertyAssetTotal,
   activeEffects,
+  hasBombii,
 }: {
   teamName: string;
   representativeName: string | null;
@@ -60,6 +61,7 @@ export function StatusHeader({
   currentGoalDistance: number | null;
   propertyAssetTotal: number;
   activeEffects: { id: string; effect_type: string }[];
+  hasBombii: boolean;
 }) {
   const actionLabel = isEventOver ? "ゲーム終了" : isEventScheduled ? "本部の開始を待っています" : ACTION_LABEL[state] ?? state;
 
@@ -69,6 +71,7 @@ export function StatusHeader({
         <h1 className="font-game text-lg font-black text-game-navy dark:text-game-gold">
           🚃 {teamName}
           {representativeName && <span className="ml-1.5 text-sm font-bold text-zinc-400">({representativeName})</span>}
+          {hasBombii && <span className="ml-1.5 align-middle text-base" title="ボンビー憑依中">😈</span>}
         </h1>
         <Link href="/team/mypage" className="shrink-0 rounded-full border-2 border-zinc-300 px-2.5 py-1 text-xs font-bold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
           マイページ

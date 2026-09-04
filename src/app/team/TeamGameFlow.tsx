@@ -71,6 +71,9 @@ export function TeamGameFlow({
   const [dicePhase, setDicePhase] = useState<DicePhase | "done" | null>(null);
   const [missionFailureToast, setMissionFailureToast] = useState(false);
   const [coinSlotResult, setCoinSlotResult] = useState<number | null>(null);
+  const [pendingReward, setPendingReward] = useState<{ choice: "CARD" | "COIN"; amount?: number } | null>(null);
+  const [bombiiEncounter, setBombiiEncounter] = useState<{ type: string; amount: number; percent?: number } | null>(null);
+  const [bombiiEscapeResult, setBombiiEscapeResult] = useState<{ roll: number; escaped: boolean; new_holder_team_name?: string } | null>(null);
   const selectedMission = offeredMissions.find((m) => m.id === missionAttempt?.selected_mission_id) ?? null;
 
   // 失敗トーストを出すため、直前のstateを覚えておく
@@ -306,6 +309,16 @@ export function TeamGameFlow({
     }
   }
 
+  function revealReward(choice: "CARD" | "COIN", data: { amount?: number }) {
+    if (choice === "COIN") {
+      setCoinSlotResult(data.amount ?? 0);
+    } else {
+      // カードの結果はcard_notifications経由の既存CardSlotOverlayが表示するため、
+      // ここではpage.tsxのデータを更新するだけでよい。
+      router.refresh();
+    }
+  }
+
   async function handleClaimReward(choice: "CARD" | "COIN") {
     setBusy(true);
     setError(null);
@@ -316,13 +329,26 @@ export function TeamGameFlow({
       setError(error.message);
       return;
     }
-    if (choice === "COIN") {
-      setCoinSlotResult((data as { amount: number }).amount);
+    const result = data as { amount?: number; bombii?: { type: string; amount: number; percent?: number } };
+    if (result.bombii) {
+      // ボンビーの悪さが発生した場合は先にその演出を見せ、確認後に本来の報酬を表示する。
+      setPendingReward({ choice, amount: result.amount });
+      setBombiiEncounter(result.bombii);
     } else {
-      // カードの結果はcard_notifications経由の既存CardSlotOverlayが表示するため、
-      // ここではpage.tsxのデータを更新するだけでよい。
-      router.refresh();
+      revealReward(choice, result);
     }
+  }
+
+  async function handleBombiiEscapeRoll() {
+    setBusy(true);
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc("fn_bombii_escape_roll");
+    setBusy(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setBombiiEscapeResult(data as { roll: number; escaped: boolean; new_holder_team_name?: string });
   }
 
   if (isEventOver) {
@@ -357,6 +383,48 @@ export function TeamGameFlow({
             router.refresh();
           }}
         />
+      )}
+
+      {bombiiEncounter && (
+        <div role="alertdialog" className="fixed inset-0 z-[65] flex flex-col items-center justify-center bg-black/80 px-6">
+          <div className="w-full max-w-xs rounded-[var(--game-radius-lg)] border-4 border-purple-500 bg-white p-6 text-center shadow-[var(--game-shadow-lg)] dark:bg-zinc-900">
+            <p className="text-4xl">😈</p>
+            <p className="game-text-event mt-2 text-xl text-purple-700 dark:text-purple-300">ボンビーの悪さ!</p>
+            <p className="mt-2 text-sm">
+              {bombiiEncounter.type === "PROPERTY_SOLD"
+                ? `不動産を強制的に安売りさせられました(+${formatYen(bombiiEncounter.amount)}だけ手元に)`
+                : bombiiEncounter.amount > 0
+                  ? `現金の${bombiiEncounter.percent}%(${formatYen(bombiiEncounter.amount)})を奪われました`
+                  : "手持ちの現金がなく、被害はありませんでした"}
+            </p>
+            {bombiiEscapeResult === null ? (
+              <GameButton onClick={handleBombiiEscapeRoll} disabled={busy} variant="dice" className="mt-4 w-full">
+                🎲 撃退チャレンジ(サイコロを振る)
+              </GameButton>
+            ) : (
+              <div className="mt-4 space-y-2">
+                <p className="text-2xl font-black">🎲 {bombiiEscapeResult.roll}</p>
+                <p className={`text-sm font-bold ${bombiiEscapeResult.escaped ? "text-emerald-600" : "text-zinc-500"}`}>
+                  {bombiiEscapeResult.escaped
+                    ? `撃退成功!「${bombiiEscapeResult.new_holder_team_name}」になすりつけました`
+                    : "撃退失敗…まだボンビーが憑いています"}
+                </p>
+                <GameButton
+                  onClick={() => {
+                    setBombiiEncounter(null);
+                    setBombiiEscapeResult(null);
+                    if (pendingReward) revealReward(pendingReward.choice, pendingReward);
+                    setPendingReward(null);
+                  }}
+                  variant="primary"
+                  className="w-full"
+                >
+                  つぎへ
+                </GameButton>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {missionFailureToast && (

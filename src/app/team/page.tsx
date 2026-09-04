@@ -13,6 +13,7 @@ import { StatusHeader } from "./StatusHeader";
 import { CardSlotOverlay } from "./CardSlotOverlay";
 import { DestinationArrivalOverlay } from "./DestinationArrivalOverlay";
 import { DividendAnnouncementOverlay } from "./DividendAnnouncementOverlay";
+import { BombiiCurseOverlay } from "./BombiiCurseOverlay";
 import { GameStartIntro } from "./GameStartIntro";
 import { ActionHistory } from "./ActionHistory";
 import { TeamPositionMap, type LineTopology } from "./TeamPositionMap";
@@ -32,7 +33,7 @@ export default async function TeamPage() {
   const { data: state } = await supabase
     .from("team_state")
     .select(
-      "state, coin_balance_cache, mission_success_count, current_turn_id, current_station_id, current_station:current_station_id(name)"
+      "state, coin_balance_cache, mission_success_count, current_turn_id, current_station_id, current_station:current_station_id(name), has_bombii"
     )
     .eq("team_id", actor.teamId)
     .single();
@@ -263,6 +264,7 @@ export default async function TeamPage() {
         currentGoalDistance={currentGoalDistance}
         propertyAssetTotal={propertyAssetTotal}
         activeEffects={activeEffects ?? []}
+        hasBombii={state?.has_bombii ?? false}
       />
       {event && <CountdownTimer eventId={event.id} endAt={event.end_at} status={event.status} />}
       <PasswordChangePanel />
@@ -271,6 +273,7 @@ export default async function TeamPage() {
       <CardSlotOverlay notifications={notifications ?? []} />
       <DestinationArrivalOverlay notifications={notifications ?? []} />
       <DividendAnnouncementOverlay notifications={notifications ?? []} />
+      <BombiiCurseOverlay notifications={notifications ?? []} myTeamName={actor.teamName} />
 
       <TeamGameFlow
         teamId={actor.teamId}
