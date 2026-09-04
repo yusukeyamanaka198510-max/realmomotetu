@@ -13,6 +13,7 @@ const ACTION_LABEL: Record<TeamGameState, string> = {
   MISSION_SELECTION: "ミッションを選ぶ",
   MISSION_ACTIVE: "証拠写真を提出する",
   MISSION_REVIEW: "本部判定中…",
+  MISSION_REWARD_CHOICE: "報酬を選ぶ",
   PROPERTY_PURCHASE: "物件を見る(任意)",
   PAUSED: "一時停止中",
   FINISHED: "ゲーム終了",

@@ -7,6 +7,7 @@ import { EVIDENCE_BUCKET, arrivalPhotoPath, missionPhotoPath } from "@/lib/game/
 import type { TeamGameState } from "@/lib/game/types";
 import { formatYen } from "@/lib/game/format";
 import { DiceAnimation, type DicePhase } from "./DiceAnimation";
+import { CoinSlotOverlay } from "./CoinSlotOverlay";
 import { GameBadge, GameButton } from "@/components/game-ui";
 
 type MissionAttempt = {
@@ -66,28 +67,16 @@ export function TeamGameFlow({
   const [missionFiles, setMissionFiles] = useState<File[]>([]);
   const [stationQuery, setStationQuery] = useState("");
   const [dicePhase, setDicePhase] = useState<DicePhase | "done" | null>(null);
-  const [missionCelebration, setMissionCelebration] = useState<{ title: string; reward: number } | null>(null);
   const [missionFailureToast, setMissionFailureToast] = useState(false);
+  const [coinSlotResult, setCoinSlotResult] = useState<number | null>(null);
   const selectedMission = offeredMissions.find((m) => m.id === missionAttempt?.selected_mission_id) ?? null;
 
-  // ミッション成功の瞬間を検知するため、直前のstateと選択中ミッション情報を覚えておく。
-  // MISSION_REVIEW → DICE_READY/PROPERTY_PURCHASE への遷移だけが「成功」を意味する
-  // (失敗の場合はMISSION_ACTIVEへ戻るため、この遷移では発火しない)。
+  // 失敗トーストを出すため、直前のstateを覚えておく
+  // (MISSION_REVIEW → MISSION_ACTIVE への遷移だけが「失敗して再挑戦」を意味する)。
   const prevStateRef = useRef<TeamGameState | null>(null);
-  const lastMissionRef = useRef<{ title: string; reward: number } | null>(null);
-  useEffect(() => {
-    if (selectedMission) {
-      lastMissionRef.current = { title: selectedMission.title, reward: selectedMission.reward };
-    }
-  }, [selectedMission]);
   useEffect(() => {
     const prev = prevStateRef.current;
     prevStateRef.current = initialState;
-    if (prev === "MISSION_REVIEW" && (initialState === "DICE_READY" || initialState === "PROPERTY_PURCHASE") && lastMissionRef.current) {
-      setMissionCelebration(lastMissionRef.current);
-      const timer = setTimeout(() => setMissionCelebration(null), 2600);
-      return () => clearTimeout(timer);
-    }
     if (prev === "MISSION_REVIEW" && initialState === "MISSION_ACTIVE") {
       setMissionFailureToast(true);
       const timer = setTimeout(() => setMissionFailureToast(false), 1800);
@@ -310,6 +299,25 @@ export function TeamGameFlow({
     }
   }
 
+  async function handleClaimReward(choice: "CARD" | "COIN") {
+    setBusy(true);
+    setError(null);
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc("fn_claim_mission_reward", { p_choice: choice });
+    setBusy(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    if (choice === "COIN") {
+      setCoinSlotResult((data as { amount: number }).amount);
+    } else {
+      // カードの結果はcard_notifications経由の既存CardSlotOverlayが表示するため、
+      // ここではpage.tsxのデータを更新するだけでよい。
+      router.refresh();
+    }
+  }
+
   if (isEventOver) {
     return (
       <div className="anim-pop mt-6 overflow-hidden rounded-[var(--game-radius-lg)] border-4 border-game-gold bg-gradient-to-b from-game-navy to-slate-900 p-8 text-center shadow-[var(--game-shadow-lg)]">
@@ -334,17 +342,14 @@ export function TeamGameFlow({
 
   return (
     <div className="mt-6 rounded border border-zinc-200 p-4 dark:border-zinc-800">
-      {missionCelebration && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" role="status">
-          <div className="anim-slam w-64 rounded-[var(--game-radius-lg)] border-4 border-game-green bg-white p-6 text-center shadow-[var(--game-shadow-lg)] dark:bg-zinc-900">
-            <p className="text-4xl">🎉</p>
-            <p className="game-text-event mt-1 text-2xl">ミッション達成!</p>
-            <p className="mt-2 text-sm font-semibold text-zinc-700 dark:text-zinc-200">{missionCelebration.title}</p>
-            <p className="mt-2 text-2xl font-black text-game-gold [text-shadow:0_1px_0_rgba(0,0,0,0.15)]">
-              +{formatYen(missionCelebration.reward)}
-            </p>
-          </div>
-        </div>
+      {coinSlotResult !== null && (
+        <CoinSlotOverlay
+          amount={coinSlotResult}
+          onDone={() => {
+            setCoinSlotResult(null);
+            router.refresh();
+          }}
+        />
       )}
 
       {missionFailureToast && (
@@ -409,10 +414,7 @@ export function TeamGameFlow({
             >
               <div className="flex items-center justify-between gap-2">
                 <p className="font-semibold">{m.title}</p>
-                <div className="flex flex-none items-center gap-1.5">
-                  <DifficultyBadge difficulty={m.difficulty} />
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">+{formatYen(m.reward)}</span>
-                </div>
+                <DifficultyBadge difficulty={m.difficulty} />
               </div>
               <p className="mt-1.5 text-zinc-600 dark:text-zinc-400">{m.description}</p>
             </button>
@@ -426,10 +428,7 @@ export function TeamGameFlow({
             <div className="rounded-lg border border-zinc-300 bg-zinc-50 p-3.5 dark:border-zinc-700 dark:bg-zinc-900">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-zinc-500">挑戦中のミッション</p>
-                <div className="flex flex-none items-center gap-1.5">
-                  <DifficultyBadge difficulty={selectedMission.difficulty} />
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">+{formatYen(selectedMission.reward)}</span>
-                </div>
+                <DifficultyBadge difficulty={selectedMission.difficulty} />
               </div>
               <p className="mt-1 font-semibold">{selectedMission.title}</p>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{selectedMission.description}</p>
@@ -460,15 +459,31 @@ export function TeamGameFlow({
             <div className="rounded-lg border border-zinc-300 bg-zinc-50 p-3.5 dark:border-zinc-700 dark:bg-zinc-900">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs text-zinc-500">提出したミッション</p>
-                <div className="flex flex-none items-center gap-1.5">
-                  <DifficultyBadge difficulty={selectedMission.difficulty} />
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">+{formatYen(selectedMission.reward)}</span>
-                </div>
+                <DifficultyBadge difficulty={selectedMission.difficulty} />
               </div>
               <p className="mt-1 font-semibold">{selectedMission.title}</p>
             </div>
           )}
           <p className="text-sm text-zinc-600 dark:text-zinc-400">本部の判定をお待ちください...</p>
+        </div>
+      )}
+
+      {initialState === "MISSION_REWARD_CHOICE" && (
+        <div className="space-y-3 text-center">
+          <p className="anim-pop game-text-event text-2xl">🎉ミッション達成!</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">報酬を選んでください</p>
+          <div className="grid grid-cols-2 gap-3">
+            <GameButton onClick={() => handleClaimReward("CARD")} disabled={busy} variant="card" size="lg" className="flex-col !py-4">
+              🎴
+              <br />
+              カード
+            </GameButton>
+            <GameButton onClick={() => handleClaimReward("COIN")} disabled={busy} variant="destination" size="lg" className="flex-col !py-4">
+              🪙
+              <br />
+              コイン
+            </GameButton>
+          </div>
         </div>
       )}
 
