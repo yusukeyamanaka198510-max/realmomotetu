@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ConfettiBurst, SpeedLines } from "@/components/game-ui";
+import { formatYen } from "@/lib/game/format";
 
 type ArrivalNotification = { id: string; message: string; created_at: string };
 
@@ -50,7 +51,7 @@ export function DestinationArrivalOverlay({ notifications }: { notifications: Ar
         <p className="game-text-event mt-1 text-5xl">到着!!</p>
         <p className="mt-4 text-lg font-bold text-white">{active.station}</p>
         <p className="mt-2 text-3xl font-black text-game-gold [text-shadow:0_2px_0_rgba(0,0,0,0.4)]">
-          +{active.amount.toLocaleString()}円
+          +{formatYen(active.amount)}
         </p>
         <p className="mt-4 text-sm font-bold text-white/80">次のゴール: {active.nextStation}</p>
         <p className="mt-3 text-xs text-white/50">(タップで閉じる)</p>

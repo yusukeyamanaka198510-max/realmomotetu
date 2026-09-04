@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { EVIDENCE_BUCKET, missionPhotoPath } from "@/lib/game/storage";
 import { GameButton, GamePanel } from "@/components/game-ui";
+import { formatYen } from "@/lib/game/format";
 
 export type BonusMissionAttempt = {
   id: string;
@@ -80,7 +81,7 @@ export function BonusMissionPanel({
     <GamePanel title="ボーナスミッション" icon="✨" accent="purple" className="mt-6 border-2 border-fuchsia-200 dark:border-fuchsia-900">
       <p className="font-bold">{attempt.title}</p>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{attempt.description}</p>
-      <p className="mt-1 text-xs font-bold text-game-gold">成功報酬: +{attempt.reward.toLocaleString()}円(通常ミッションとは別に加算)</p>
+      <p className="mt-1 text-xs font-bold text-game-gold">成功報酬: +{formatYen(attempt.reward)}(通常ミッションとは別に加算)</p>
 
       {error && <p className="mt-2 text-xs font-bold text-game-red">{error}</p>}
 

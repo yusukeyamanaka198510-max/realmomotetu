@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { COIN_TRANSACTION_LABELS, type CoinTransactionType } from "@/lib/game/types";
+import { formatYen } from "@/lib/game/format";
 
 type LedgerRow = {
   id: string;
@@ -55,7 +56,7 @@ export function ActionHistory({ teamId }: { teamId: string }) {
       at: r.created_at,
       icon: COIN_TRANSACTION_LABELS[r.transaction_type].slice(0, 2),
       text: `${COIN_TRANSACTION_LABELS[r.transaction_type].slice(2).trim()}${r.reason ? `(${r.reason})` : ""}`,
-      amountLabel: `${r.amount >= 0 ? "+" : ""}${r.amount.toLocaleString()}円`,
+      amountLabel: `${r.amount >= 0 ? "+" : ""}${formatYen(r.amount)}`,
       amountTone: r.amount >= 0 ? "up" : "down",
     }));
 

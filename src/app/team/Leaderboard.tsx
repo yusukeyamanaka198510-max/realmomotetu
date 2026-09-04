@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { GameBadge, GamePanel } from "@/components/game-ui";
+import { formatYen } from "@/lib/game/format";
 
 type LeaderboardRow = { rank: number; coin_balance_cache: number; team_name: string | null; is_mine: boolean };
 type GoalRow = { sequence_order: number; station_name: string; team_name: string | null; cleared_at: string };
@@ -92,7 +93,7 @@ export function Leaderboard({ eventId }: { eventId: string }) {
 
   return (
     <div className="mt-6 space-y-4">
-      <GamePanel title="順位(コイン)" icon="🏆" accent="gold">
+      <GamePanel title="順位(資産額)" icon="🏆" accent="gold">
         {myRankDelta && (
           <div className="mb-2 flex justify-end">
             <span className={myRankDelta === "up" ? "anim-pop" : "anim-shake"}>
@@ -128,7 +129,7 @@ export function Leaderboard({ eventId }: { eventId: string }) {
                     </span>
                     {r.is_mine && r.team_name ? `${r.team_name}(あなた)` : r.rank <= 3 ? `${r.rank}位` : ""}
                   </span>
-                  <span className="font-mono tabular-nums text-game-gold">{r.coin_balance_cache.toLocaleString()} コイン</span>
+                  <span className="font-mono tabular-nums text-game-gold">{formatYen(r.coin_balance_cache)}</span>
                 </div>
               </li>
             );

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { EVIDENCE_BUCKET, arrivalPhotoPath, missionPhotoPath } from "@/lib/game/storage";
 import type { TeamGameState } from "@/lib/game/types";
+import { formatYen } from "@/lib/game/format";
 import { DiceAnimation, type DicePhase } from "./DiceAnimation";
 import { GameBadge, GameButton } from "@/components/game-ui";
 
@@ -334,7 +335,7 @@ export function TeamGameFlow({
             <p className="game-text-event mt-1 text-2xl">ミッション達成!</p>
             <p className="mt-2 text-sm font-semibold text-zinc-700 dark:text-zinc-200">{missionCelebration.title}</p>
             <p className="mt-2 text-2xl font-black text-game-gold [text-shadow:0_1px_0_rgba(0,0,0,0.15)]">
-              +{missionCelebration.reward.toLocaleString()}円
+              +{formatYen(missionCelebration.reward)}
             </p>
           </div>
         </div>
@@ -404,7 +405,7 @@ export function TeamGameFlow({
                 <p className="font-semibold">{m.title}</p>
                 <div className="flex flex-none items-center gap-1.5">
                   <DifficultyBadge difficulty={m.difficulty} />
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">+{m.reward.toLocaleString()}</span>
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">+{formatYen(m.reward)}</span>
                 </div>
               </div>
               <p className="mt-1.5 text-zinc-600 dark:text-zinc-400">{m.description}</p>
@@ -421,7 +422,7 @@ export function TeamGameFlow({
                 <p className="text-xs text-zinc-500">挑戦中のミッション</p>
                 <div className="flex flex-none items-center gap-1.5">
                   <DifficultyBadge difficulty={selectedMission.difficulty} />
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">+{selectedMission.reward.toLocaleString()}</span>
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">+{formatYen(selectedMission.reward)}</span>
                 </div>
               </div>
               <p className="mt-1 font-semibold">{selectedMission.title}</p>
@@ -455,7 +456,7 @@ export function TeamGameFlow({
                 <p className="text-xs text-zinc-500">提出したミッション</p>
                 <div className="flex flex-none items-center gap-1.5">
                   <DifficultyBadge difficulty={selectedMission.difficulty} />
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">+{selectedMission.reward.toLocaleString()}</span>
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400">+{formatYen(selectedMission.reward)}</span>
                 </div>
               </div>
               <p className="mt-1 font-semibold">{selectedMission.title}</p>
@@ -475,7 +476,7 @@ export function TeamGameFlow({
               <p className="font-medium">{p.name}</p>
               <p className="mt-1 text-zinc-600 dark:text-zinc-400">{p.description}</p>
               <p className="mt-1">
-                価格: {p.price.toLocaleString()} / 利回り: +{p.yield_amount.toLocaleString()}
+                価格: {formatYen(p.price)} / 利回り: +{formatYen(p.yield_amount)}
               </p>
               <GameButton onClick={() => handlePurchaseProperty(p.id, p.name)} disabled={busy} variant="card" className="mt-2 w-full">
                 🏠 購入する

@@ -12,6 +12,7 @@ import {
   type TeamGameState,
 } from "@/lib/game/types";
 import { GameBadge, GameButton, GamePanel } from "@/components/game-ui";
+import { formatYen } from "@/lib/game/format";
 
 export type OwnedCard = {
   card_id: string;
@@ -322,7 +323,7 @@ export function CardPanel({
               <option value="">対象の物件を選択(現在駅の物件のみ)</option>
               {ownProperties.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}(半額: {Math.floor(p.price / 2).toLocaleString()}円)
+                  {p.name}(半額: {formatYen(Math.floor(p.price / 2))})
                 </option>
               ))}
             </select>
@@ -350,7 +351,7 @@ export function CardPanel({
               <option value="">乗っ取る物件を選択</option>
               {takeoverTargets.map((t) => (
                 <option key={t.purchase_id} value={t.purchase_id}>
-                  {t.team_name} / {t.property_name}(価格: {t.price_paid.toLocaleString()}円)
+                  {t.team_name} / {t.property_name}(価格: {formatYen(t.price_paid)})
                 </option>
               ))}
             </select>
