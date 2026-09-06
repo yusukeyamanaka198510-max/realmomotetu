@@ -68,7 +68,8 @@ export function TeamGameFlow({
   const [files, setFiles] = useState<File[]>([]);
   const [missionFiles, setMissionFiles] = useState<File[]>([]);
   const [stationQuery, setStationQuery] = useState("");
-  const [dicePhase, setDicePhase] = useState<DicePhase | "done" | null>(null);
+  const [dicePhase, setDicePhase] = useState<DicePhase | null>(null);
+  const [canStopDice, setCanStopDice] = useState(false);
   const [missionFailureToast, setMissionFailureToast] = useState(false);
   const [coinSlotResult, setCoinSlotResult] = useState<number | null>(null);
   const [pendingReward, setPendingReward] = useState<{ choice: "CARD" | "COIN"; amount?: number; money_god_bonus?: number } | null>(null);
@@ -134,36 +135,49 @@ export function TeamGameFlow({
   }, [teamId, router]);
 
   // ページ再読み込み等でDESTINATION_SELECTION状態のままマウントされた場合も、
-  // 演出をスキップせず「確定タップ待ち」から再開する。移動先確定後(state変化)はリセットする。
+  // 演出をスキップせず結果確定済みの状態から再開する。移動先確定後(state変化)はリセットする。
   useEffect(() => {
     if (initialState === "DESTINATION_SELECTION") {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- サーバー状態(initialState)への同期が目的の意図的な同期
-      setDicePhase((p) => p ?? "settled");
+      setDicePhase((p) => p ?? "revealed");
+      // router.refresh()のPromiseはRSCペイロードが実際に反映される前に解決することがあるため、
+      // 「止める」を押せる判定はrefresh呼び出し自体ではなく、実際にdiceResultが届いた
+      // (=initialStateが本当にDESTINATION_SELECTIONへ切り替わった)ことで行う。
+      // これを怠ると、演出中に出目が後から差し替わり、最後だけ急に動いて見える不具合になる。
+      if (diceResult) {
+        setCanStopDice(true);
+      }
     } else {
       setDicePhase(null);
+      setCanStopDice(false);
     }
-  }, [initialState]);
+  }, [initialState, diceResult]);
 
   async function handleRollDice() {
     setError(null);
+    setCanStopDice(false);
     setDicePhase("rolling");
     const supabase = createClient();
-    const [{ error }] = await Promise.all([
-      supabase.rpc("fn_roll_dice", { p_dice_count: 1 }),
-      new Promise((resolve) => setTimeout(resolve, 900)),
-    ]);
+    const { error } = await supabase.rpc("fn_roll_dice", { p_dice_count: 1 });
     if (error) {
       setError(error.message);
       setDicePhase(null);
       return;
     }
-    await router.refresh();
-    setDicePhase("settled");
+    // サーバー側では既に出目が確定している。演出上は「止める」を押すまで回り続けさせ、
+    // 押された時点で本来の出目へなめらかに減速して着地させる(不正操作防止のため、
+    // 出目そのものはこの時点で既にRPCが返した確定値であり、演出のタイミングだけが操作可能)。
+    // 「止める」を押せるようにする判定は、実際にdiceResultが届いたことを見ている
+    // useEffect側で行う(router.refresh()のPromiseは実データ反映より先に解決しうるため)。
+    router.refresh();
   }
 
-  function handleConfirmDice() {
-    setDicePhase("flying");
-    setTimeout(() => setDicePhase("done"), 700);
+  function handleStopDice() {
+    setDicePhase("landing");
+  }
+
+  function handleDiceLanded() {
+    setDicePhase("revealed");
   }
 
   async function handleSelectDestination(stationId: string, stationName: string) {
@@ -602,37 +616,26 @@ export function TeamGameFlow({
         </div>
       )}
 
-      {initialState === "DICE_READY" && (
+      {(initialState === "DICE_READY" || initialState === "DESTINATION_SELECTION") && (dicePhase === "rolling" || dicePhase === "landing") && (
         <div className="space-y-3">
-          {dicePhase === "rolling" ? (
-            <DiceAnimation phase="rolling" values={null} onConfirm={() => {}} />
-          ) : (
-            <GameButton onClick={handleRollDice} variant="dice" size="lg" className="w-full">
-              🎲 サイコロを振る
+          <DiceAnimation phase={dicePhase} values={diceResult?.individual_results ?? [1]} onLanded={handleDiceLanded} />
+          {dicePhase === "rolling" && (
+            <GameButton onClick={handleStopDice} disabled={!canStopDice} variant="dice" size="lg" className="w-full">
+              {canStopDice ? "⏹ 止める" : "🎲 振っています…"}
             </GameButton>
           )}
         </div>
       )}
 
-      {initialState === "DESTINATION_SELECTION" && (dicePhase === "settled" || dicePhase === "flying") && (
-        <DiceAnimation
-          phase={dicePhase}
-          values={dicePhase === "flying" ? (diceResult?.individual_results ?? null) : null}
-          onConfirm={diceResult ? handleConfirmDice : () => {}}
-        />
+      {initialState === "DICE_READY" && dicePhase === null && (
+        <GameButton onClick={handleRollDice} variant="dice" size="lg" className="w-full">
+          🎲 サイコロを振る
+        </GameButton>
       )}
 
-      {initialState === "DESTINATION_SELECTION" && dicePhase === "done" && (
+      {initialState === "DESTINATION_SELECTION" && dicePhase === "revealed" && (
         <div className="space-y-3">
-          {diceResult && (
-            <p className="text-sm">
-              サイコロの結果:{" "}
-              <span className="text-lg font-bold">{diceResult.total}</span>
-              {diceResult.individual_results.length > 1 && (
-                <span className="text-zinc-500"> ({diceResult.individual_results.join(" + ")})</span>
-              )}
-            </p>
-          )}
+          {diceResult && <DiceAnimation phase="revealed" values={diceResult.individual_results} />}
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             移動先を選んでください({reachableStations.length}駅から選択可能)
           </p>
