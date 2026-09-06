@@ -8,7 +8,7 @@ import type { TeamGameState } from "@/lib/game/types";
 import { formatYen } from "@/lib/game/format";
 import { DiceAnimation, type DicePhase } from "./DiceAnimation";
 import { CoinSlotOverlay } from "./CoinSlotOverlay";
-import { GameBadge, GameButton } from "@/components/game-ui";
+import { GameButton } from "@/components/game-ui";
 
 type MissionAttempt = {
   id: string;
@@ -19,16 +19,6 @@ type MissionAttempt = {
 type MissionDifficulty = "EASY" | "NORMAL" | "HARD";
 type OfferedMission = { id: string; title: string; description: string; difficulty: MissionDifficulty; reward: number };
 
-const DIFFICULTY_STYLE: Record<MissionDifficulty, { label: string; tone: "green" | "blue" | "red" }> = {
-  EASY: { label: "易", tone: "green" },
-  NORMAL: { label: "中", tone: "blue" },
-  HARD: { label: "難", tone: "red" },
-};
-
-function DifficultyBadge({ difficulty }: { difficulty: MissionDifficulty }) {
-  const d = DIFFICULTY_STYLE[difficulty];
-  return <GameBadge tone={d.tone}>{d.label}</GameBadge>;
-}
 type DiceResult = { total: number; individual_results: number[] };
 type ReachableStation = { id: string; name: string };
 type Property = { id: string; name: string; price: number; yield_amount: number; description: string };
@@ -508,10 +498,7 @@ export function TeamGameFlow({
               disabled={busy}
               className="anim-press w-full rounded-xl border-2 border-zinc-300 bg-white p-3.5 text-left text-sm shadow-[var(--game-shadow-sm)] transition-transform hover:-translate-y-0.5 hover:border-game-blue disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
             >
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold">{m.title}</p>
-                <DifficultyBadge difficulty={m.difficulty} />
-              </div>
+              <p className="font-semibold">{m.title}</p>
               <p className="mt-1.5 text-zinc-600 dark:text-zinc-400">{m.description}</p>
             </button>
           ))}
@@ -522,10 +509,7 @@ export function TeamGameFlow({
         <div className="space-y-3">
           {selectedMission && (
             <div className="rounded-lg border border-zinc-300 bg-zinc-50 p-3.5 dark:border-zinc-700 dark:bg-zinc-900">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-zinc-500">挑戦中のミッション</p>
-                <DifficultyBadge difficulty={selectedMission.difficulty} />
-              </div>
+              <p className="text-xs text-zinc-500">挑戦中のミッション</p>
               <p className="mt-1 font-semibold">{selectedMission.title}</p>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{selectedMission.description}</p>
             </div>
@@ -552,10 +536,7 @@ export function TeamGameFlow({
         <div className="space-y-3">
           {selectedMission && (
             <div className="rounded-lg border border-zinc-300 bg-zinc-50 p-3.5 dark:border-zinc-700 dark:bg-zinc-900">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-zinc-500">提出したミッション</p>
-                <DifficultyBadge difficulty={selectedMission.difficulty} />
-              </div>
+              <p className="text-xs text-zinc-500">提出したミッション</p>
               <p className="mt-1 font-semibold">{selectedMission.title}</p>
             </div>
           )}
