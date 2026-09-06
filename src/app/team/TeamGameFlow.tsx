@@ -208,8 +208,8 @@ export function TeamGameFlow({
   }
 
   async function handleSubmitArrival() {
-    if (files.length < 1 || files.length > 3) {
-      setError("写真は1〜3枚アップロードしてください");
+    if (files.length !== 1) {
+      setError("写真を1枚アップロードしてください");
       return;
     }
     setBusy(true);
@@ -290,8 +290,8 @@ export function TeamGameFlow({
 
   async function handleSubmitMissionPhotos() {
     if (!missionAttempt) return;
-    if (missionFiles.length < 1 || missionFiles.length > 3) {
-      setError("写真は1〜3枚アップロードしてください");
+    if (missionFiles.length !== 1) {
+      setError("写真を1枚アップロードしてください");
       return;
     }
     setBusy(true);
@@ -394,7 +394,7 @@ export function TeamGameFlow({
   }
 
   return (
-    <div className="mt-6 rounded border border-zinc-200 p-4 dark:border-zinc-800">
+    <div className="mt-6 rounded border border-zinc-200 bg-white p-4 shadow-[var(--game-shadow-sm)] dark:border-zinc-800 dark:bg-zinc-900">
       {coinSlotResult !== null && (
         <CoinSlotOverlay
           amount={coinSlotResult}
@@ -473,17 +473,16 @@ export function TeamGameFlow({
       {initialState === "ARRIVAL_SUBMISSION" && (
         <div className="space-y-3">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            到着証拠写真を1〜3枚アップロードしてください
+            到着証拠写真を1枚アップロードしてください
           </p>
           <label className="block w-full cursor-pointer rounded border border-dashed border-zinc-400 p-4 text-center text-sm hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-900">
             <input
               type="file"
               accept="image/*"
-              multiple
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 3))}
+              onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 1))}
               className="hidden"
             />
-            {files.length > 0 ? `${files.length}枚選択済み(タップして変更)` : "タップして写真を選択"}
+            {files.length > 0 ? "1枚選択済み(タップして変更)" : "タップして写真を選択"}
           </label>
           <GameButton onClick={handleSubmitArrival} disabled={busy || files.length === 0} variant="primary" className="w-full">
             {busy ? "提出中..." : "📸 提出する"}
@@ -532,17 +531,16 @@ export function TeamGameFlow({
             </div>
           )}
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            ミッションを実行し、証拠写真を1〜3枚アップロードしてください
+            ミッションを実行し、証拠写真を1枚アップロードしてください
           </p>
           <label className="block w-full cursor-pointer rounded border border-dashed border-zinc-400 p-4 text-center text-sm hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-900">
             <input
               type="file"
               accept="image/*"
-              multiple
-              onChange={(e) => setMissionFiles(Array.from(e.target.files ?? []).slice(0, 3))}
+              onChange={(e) => setMissionFiles(Array.from(e.target.files ?? []).slice(0, 1))}
               className="hidden"
             />
-            {missionFiles.length > 0 ? `${missionFiles.length}枚選択済み(タップして変更)` : "タップして写真を選択"}
+            {missionFiles.length > 0 ? "1枚選択済み(タップして変更)" : "タップして写真を選択"}
           </label>
           <GameButton onClick={handleSubmitMissionPhotos} disabled={busy || missionFiles.length === 0} variant="success" className="w-full">
             {busy ? "提出中..." : "📸 提出する"}
