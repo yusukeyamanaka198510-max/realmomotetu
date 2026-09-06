@@ -672,6 +672,7 @@ export function TeamGameFlow({
         "MISSION_SELECTION",
         "MISSION_ACTIVE",
         "MISSION_REVIEW",
+        "MISSION_REWARD_CHOICE",
         "DICE_READY",
         "DESTINATION_SELECTION",
         "PROPERTY_PURCHASE",
