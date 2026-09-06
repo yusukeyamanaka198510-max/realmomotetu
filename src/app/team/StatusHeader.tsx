@@ -114,14 +114,7 @@ export function StatusHeader({
       {destinationStationName && (
         <div className="mt-2 flex items-center justify-between rounded-xl border-2 border-dashed border-game-gold/60 bg-amber-50 px-3 py-2 text-sm dark:bg-amber-950/40">
           <span className="font-bold text-amber-700 dark:text-amber-300">今の目的地</span>
-          <span className="flex items-baseline gap-1.5 font-black text-game-gold">
-            🏁 {destinationStationName}
-            {currentGoalDistance !== null && (
-              <span className="text-xs font-bold text-amber-600">
-                {currentGoalDistance > 0 ? `あと${currentGoalDistance}マス` : "ゴール駅!"}
-              </span>
-            )}
-          </span>
+          <span className="font-black text-game-gold">🏁 {destinationStationName}</span>
         </div>
       )}
 
