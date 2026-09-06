@@ -15,6 +15,7 @@ type EventInfo = {
   obstruction_cooldown_seconds: number;
   dividend_interval_minutes: number;
   last_dividend_run_at: string | null;
+  scheduled_start_at: string | null;
 };
 
 // datetime-local入力用にローカルタイムゾーンの "YYYY-MM-DDTHH:mm" 形式へ変換
@@ -40,6 +41,7 @@ export function EventControlPanel({
   const [nameDraft, setNameDraft] = useState(event.name);
   const [cooldownSeconds, setCooldownSeconds] = useState(event.obstruction_cooldown_seconds);
   const [dividendMinutes, setDividendMinutes] = useState(event.dividend_interval_minutes);
+  const [scheduledStartInput, setScheduledStartInput] = useState(toDatetimeLocalValue(event.scheduled_start_at));
 
   useEffect(() => {
     const supabase = createClient();
@@ -120,6 +122,17 @@ export function EventControlPanel({
     router.refresh();
   }
 
+  async function handleSaveScheduledStart() {
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_set_scheduled_start_at", {
+      p_scheduled_start_at: scheduledStartInput ? new Date(scheduledStartInput).toISOString() : null,
+    });
+    setBusy(false);
+    if (error) return window.alert(error.message);
+    router.refresh();
+  }
+
   async function handleSaveHideMinutes() {
     setBusy(true);
     const supabase = createClient();
@@ -157,7 +170,21 @@ export function EventControlPanel({
         </div>
         {event.status === "SCHEDULED" && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-zinc-500">終了日時指定</span>
+            <span className="text-xs text-zinc-500">開始予定日時(参加者画面に案内表示)</span>
+            <input
+              type="datetime-local"
+              value={scheduledStartInput}
+              onChange={(e) => setScheduledStartInput(e.target.value)}
+              className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+            />
+            <button
+              onClick={handleSaveScheduledStart}
+              disabled={busy}
+              className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700"
+            >
+              保存
+            </button>
+            <span className="w-full text-xs text-zinc-500">終了日時指定</span>
             <input
               type="datetime-local"
               value={endAtInput}

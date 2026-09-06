@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getActor } from "@/lib/game/actor";
 import { createClient } from "@/lib/supabase/server";
 import { TeamGameFlow } from "./TeamGameFlow";
@@ -16,6 +17,7 @@ import { DividendAnnouncementOverlay } from "./DividendAnnouncementOverlay";
 import { BombiiCurseOverlay } from "./BombiiCurseOverlay";
 import { GameStartIntro } from "./GameStartIntro";
 import { TeamPositionMap, type LineTopology } from "./TeamPositionMap";
+import { ScheduledStartCountdown } from "./ScheduledStartCountdown";
 
 export default async function TeamPage() {
   const actor = await getActor();
@@ -24,9 +26,39 @@ export default async function TeamPage() {
   const supabase = await createClient();
   const { data: event } = await supabase
     .from("events")
-    .select("id, status, end_at, active_destination_station_id, active_destination:active_destination_station_id(name)")
+    .select(
+      "id, status, end_at, active_destination_station_id, active_destination:active_destination_station_id(name), scheduled_start_at"
+    )
     .eq("id", actor.eventId)
     .single();
+
+  if (event?.status === "SCHEDULED") {
+    return (
+      <div className="min-h-dvh bg-cover bg-top bg-fixed" style={{ backgroundImage: "url(/board-illustration.webp)" }}>
+        <div className="flex min-h-dvh flex-col bg-white/55 dark:bg-slate-950/70">
+          <div className="mx-auto w-full max-w-md p-6">
+            <div className="flex items-center justify-between">
+              <h1 className="font-game text-lg font-black text-game-navy dark:text-game-gold">🚃 {actor.teamName}</h1>
+              <Link
+                href="/team/mypage"
+                className="shrink-0 rounded-full border-2 border-zinc-300 bg-white px-2.5 py-1 text-xs font-bold text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+              >
+                マイページ
+              </Link>
+            </div>
+          </div>
+          <div className="mx-auto flex w-full max-w-md flex-1 items-center p-6">
+            <div className="anim-pop w-full rounded-[var(--game-radius-lg)] border-4 border-game-gold bg-gradient-to-b from-game-navy to-slate-900 p-8 text-center shadow-[var(--game-shadow-lg)]">
+              <p className="text-5xl">⏳</p>
+              <p className="game-text-event mt-3 text-2xl text-white">イベント開始前です</p>
+              <ScheduledStartCountdown scheduledStartAt={event.scheduled_start_at} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // @ts-expect-error 1:1リレーションが配列型で推論されるため
   const destinationStationName: string | null = event?.active_destination?.name ?? null;
   const { data: state } = await supabase
@@ -237,10 +269,11 @@ export default async function TeamPage() {
 
   // eslint-disable-next-line react-hooks/purity -- Server Componentがリクエスト時点のサーバー時刻で判定するのは意図通り
   const nowMs = Date.now();
+  const isEventScheduled = event?.status === "SCHEDULED";
   const isEventOver =
     !!event &&
+    !isEventScheduled &&
     (event.status === "FORCE_ENDED" || event.status === "ENDED" || (!!event.end_at && new Date(event.end_at).getTime() <= nowMs));
-  const isEventScheduled = event?.status === "SCHEDULED";
 
   const inTransitStates: TeamGameState[] = ["TRAVELING", "ARRIVAL_SUBMISSION", "ARRIVAL_REVIEW"];
   const isInTransit = state?.state && inTransitStates.includes(state.state as TeamGameState) && !!nextStationName;
