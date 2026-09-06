@@ -7,7 +7,7 @@ import { EVIDENCE_BUCKET, arrivalPhotoPath, missionPhotoPath } from "@/lib/game/
 import type { TeamGameState } from "@/lib/game/types";
 import { formatYen } from "@/lib/game/format";
 import { DiceAnimation, type DicePhase } from "./DiceAnimation";
-import { CoinSlotOverlay } from "./CoinSlotOverlay";
+import { MissionRewardSlotOverlay, type SlotReward } from "./MissionRewardSlotOverlay";
 import { GameButton } from "@/components/game-ui";
 
 type MissionAttempt = {
@@ -22,6 +22,14 @@ type OfferedMission = { id: string; title: string; description: string; difficul
 type DiceResult = { total: number; individual_results: number[] };
 type ReachableStation = { id: string; name: string };
 type Property = { id: string; name: string; price: number; yield_amount: number; description: string };
+type ClaimRewardResult = {
+  type: "CARD" | "COIN";
+  amount?: number;
+  card_name?: string;
+  card_rarity?: "NORMAL" | "RARE" | "SUPER_RARE";
+  money_god_bonus?: number;
+  bombii?: { type: string; amount: number; percent?: number };
+};
 
 export function TeamGameFlow({
   teamId,
@@ -61,9 +69,8 @@ export function TeamGameFlow({
   const [dicePhase, setDicePhase] = useState<DicePhase | null>(null);
   const [canStopDice, setCanStopDice] = useState(false);
   const [missionFailureToast, setMissionFailureToast] = useState(false);
-  const [coinSlotResult, setCoinSlotResult] = useState<number | null>(null);
-  const [pendingReward, setPendingReward] = useState<{ choice: "CARD" | "COIN"; amount?: number; money_god_bonus?: number } | null>(null);
-  const [moneyGodBonus, setMoneyGodBonus] = useState<number | null>(null);
+  const [slotReward, setSlotReward] = useState<SlotReward | null>(null);
+  const [pendingRewardResult, setPendingRewardResult] = useState<ClaimRewardResult | null>(null);
   const [bombiiEncounter, setBombiiEncounter] = useState<{ type: string; amount: number; percent?: number } | null>(null);
   const [bombiiEscapeResult, setBombiiEscapeResult] = useState<{ roll: number; escaped: boolean; new_holder_team_name?: string } | null>(null);
   const selectedMission = offeredMissions.find((m) => m.id === missionAttempt?.selected_mission_id) ?? null;
@@ -314,18 +321,11 @@ export function TeamGameFlow({
     }
   }
 
-  function revealReward(choice: "CARD" | "COIN", data: { amount?: number; money_god_bonus?: number }) {
-    if (choice === "COIN") {
-      setCoinSlotResult(data.amount ?? 0);
-      setMoneyGodBonus(data.money_god_bonus ?? null);
-    } else if (data.money_god_bonus) {
-      // カード選択時でもお金の神様ボーナスは発生しうる。専用のコイン獲得演出で見せる。
-      setCoinSlotResult(0);
-      setMoneyGodBonus(data.money_god_bonus);
+  function revealReward(result: ClaimRewardResult) {
+    if (result.type === "COIN") {
+      setSlotReward({ type: "COIN", amount: result.amount ?? 0, bonusAmount: result.money_god_bonus });
     } else {
-      // カードの結果はcard_notifications経由の既存CardSlotOverlayが表示するため、
-      // ここではpage.tsxのデータを更新するだけでよい。
-      router.refresh();
+      setSlotReward({ type: "CARD", cardName: result.card_name ?? "", cardRarity: result.card_rarity ?? "NORMAL" });
     }
   }
 
@@ -339,13 +339,13 @@ export function TeamGameFlow({
       setError(error.message);
       return;
     }
-    const result = data as { amount?: number; money_god_bonus?: number; bombii?: { type: string; amount: number; percent?: number } };
+    const result = data as ClaimRewardResult;
     if (result.bombii) {
       // ボンビーの悪さが発生した場合は先にその演出を見せ、確認後に本来の報酬を表示する。
-      setPendingReward({ choice, amount: result.amount, money_god_bonus: result.money_god_bonus });
+      setPendingRewardResult(result);
       setBombiiEncounter(result.bombii);
     } else {
-      revealReward(choice, result);
+      revealReward(result);
     }
   }
 
@@ -385,13 +385,11 @@ export function TeamGameFlow({
 
   return (
     <div className="mt-6 rounded border border-zinc-200 bg-white p-4 shadow-[var(--game-shadow-sm)] dark:border-zinc-800 dark:bg-zinc-900">
-      {coinSlotResult !== null && (
-        <CoinSlotOverlay
-          amount={coinSlotResult}
-          bonusAmount={moneyGodBonus ?? undefined}
+      {slotReward && (
+        <MissionRewardSlotOverlay
+          reward={slotReward}
           onDone={() => {
-            setCoinSlotResult(null);
-            setMoneyGodBonus(null);
+            setSlotReward(null);
             router.refresh();
           }}
         />
@@ -425,8 +423,8 @@ export function TeamGameFlow({
                   onClick={() => {
                     setBombiiEncounter(null);
                     setBombiiEscapeResult(null);
-                    if (pendingReward) revealReward(pendingReward.choice, pendingReward);
-                    setPendingReward(null);
+                    if (pendingRewardResult) revealReward(pendingRewardResult);
+                    setPendingRewardResult(null);
                   }}
                   variant="primary"
                   className="w-full"
@@ -565,17 +563,14 @@ export function TeamGameFlow({
 
       {initialState === "PROPERTY_PURCHASE" && (
         <div className="space-y-3">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            この駅の物件です。購入すると代金が引かれ、ゲーム終了時に代金+利回りが資産に戻ります。
-          </p>
           {properties.map((p) => {
             const affordable = coinBalance >= p.price;
+            const yieldPercent = p.price > 0 ? Math.round((p.yield_amount / p.price) * 1000) / 10 : 0;
             return (
               <div key={p.id} className="rounded border border-zinc-300 p-3 text-sm dark:border-zinc-700">
                 <p className="font-medium">{p.name}</p>
-                <p className="mt-1 text-zinc-600 dark:text-zinc-400">{p.description}</p>
                 <p className={`mt-1 ${affordable ? "" : "font-bold text-game-red"}`}>
-                  価格: {formatYen(p.price)} / 利回り: +{formatYen(p.yield_amount)}
+                  価格: {formatYen(p.price)} / 利回り: {yieldPercent}%
                   {!affordable && " (資産不足)"}
                 </p>
                 <GameButton onClick={() => handlePurchaseProperty(p.id, p.name)} disabled={busy || !affordable} variant="card" className="mt-2 w-full">
