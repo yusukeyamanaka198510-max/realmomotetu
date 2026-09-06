@@ -248,8 +248,13 @@ export default async function TeamPage() {
   const transitLabel = state?.state === "TRAVELING" ? "移動中" : state?.state === "ARRIVAL_REVIEW" ? "本部確認中" : "到着報告中";
 
   return (
-    <div className="mx-auto max-w-md p-6">
-      <GameStartIntro isRunning={!!event && event.status === "RUNNING" && !isEventOver} />
+    <div
+      className="min-h-dvh bg-cover bg-top bg-fixed"
+      style={{ backgroundImage: "url(/board-illustration.webp)" }}
+    >
+      <div className="min-h-dvh bg-white/55 dark:bg-slate-950/70">
+        <div className="mx-auto max-w-md p-6">
+          <GameStartIntro isRunning={!!event && event.status === "RUNNING" && !isEventOver} />
       <StatusHeader
         teamName={actor.teamName}
         representativeName={actor.representativeName}
@@ -310,7 +315,9 @@ export default async function TeamPage() {
 
       <TeamPositionMap lines={lineTopologies} stationNames={stationNames} />
 
-      <ActionHistory teamId={actor.teamId} />
+          <ActionHistory teamId={actor.teamId} />
+        </div>
+      </div>
     </div>
   );
 }

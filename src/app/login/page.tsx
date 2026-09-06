@@ -28,11 +28,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-gradient-to-b from-game-skyblue via-sky-200 to-game-gold px-4 py-10 dark:from-slate-900 dark:via-slate-800 dark:to-amber-950">
-      <div className="pointer-events-none absolute inset-0 opacity-25 [background:repeating-linear-gradient(115deg,transparent,transparent_18px,rgba(255,255,255,0.5)_18px,rgba(255,255,255,0.5)_20px)]" />
+    <div className="relative flex min-h-dvh items-end justify-center overflow-hidden bg-gradient-to-b from-game-skyblue via-sky-200 to-game-gold px-4 pb-10 pt-[40vh] dark:from-slate-900 dark:via-slate-800 dark:to-amber-950">
+      <div
+        className="anim-bg-fade-in pointer-events-none absolute inset-0 bg-cover bg-top"
+        style={{ backgroundImage: "url(/board-illustration.webp)" }}
+      />
       <form
         onSubmit={handleSubmit}
-        className="anim-pop relative w-full max-w-sm space-y-5 rounded-[var(--game-radius-lg)] border-4 border-white/70 bg-white/95 p-6 shadow-[var(--game-shadow-lg)] backdrop-blur dark:border-white/10 dark:bg-zinc-900/95"
+        className="anim-modal-fade-in relative w-full max-w-sm space-y-5 rounded-[var(--game-radius-lg)] border-4 border-white/70 bg-white/95 p-6 shadow-[var(--game-shadow-lg)] backdrop-blur dark:border-white/10 dark:bg-zinc-900/95"
       >
         <div className="text-center">
           <p className="anim-bounce text-4xl">🚃</p>
