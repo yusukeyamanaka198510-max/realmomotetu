@@ -52,8 +52,12 @@ export function CountdownTimer({ eventId, endAt, status }: { eventId: string; en
 
   return (
     <div
-      className={`rounded px-3 py-2 text-center text-sm font-bold ${
-        isOver ? "bg-zinc-700 text-white" : isUrgent ? "animate-pulse bg-red-600 text-white" : "bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900"
+      className={`px-3 py-2 text-center text-sm font-bold ${
+        isOver
+          ? "rounded bg-zinc-700 text-white"
+          : isUrgent
+            ? "animate-pulse rounded bg-red-600 text-white"
+            : "text-black dark:text-white"
       }`}
     >
       {now === null ? " " : isOver ? "ゲーム終了" : formatRemaining(remainingMs ?? 0)}

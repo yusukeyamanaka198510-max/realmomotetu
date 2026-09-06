@@ -20,6 +20,7 @@ type RenderLine = { id: string; name: string; stationIds: string[] };
 export function TeamPositionMap({ lines, stationNames }: { lines: LineTopology[]; stationNames: StationDict }) {
   const [visible, setVisible] = useState(true);
   const [rows, setRows] = useState<PositionRow[]>([]);
+  const [open, setOpen] = useState(true);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -68,8 +69,16 @@ export function TeamPositionMap({ lines, stationNames }: { lines: LineTopology[]
 
   return (
     <div className="mt-6 space-y-3">
-      <h2 className="px-1 text-sm font-bold">各チームの現在地マップ</h2>
-      {activeLines.map((line) => {
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-left shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+      >
+        <h2 className="text-sm font-bold">各チームの現在地マップ</h2>
+        <span className="text-xs text-zinc-400">{open ? "▲ 閉じる" : "▼ 開く"}</span>
+      </button>
+      {open &&
+        activeLines.map((line) => {
         const teamsHere = rows.filter(
           (r) => stationOnLine(line.stationIds, r.current_station_id) || stationOnLine(line.stationIds, r.next_station_id)
         );

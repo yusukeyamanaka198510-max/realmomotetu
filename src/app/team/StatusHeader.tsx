@@ -79,7 +79,7 @@ export function StatusHeader({
       </div>
 
       {!isEventOver && (
-        <div className="mt-2 rounded-full bg-gradient-to-b from-game-navy to-slate-900 px-3 py-2.5 text-center text-sm font-bold text-white shadow-[var(--game-shadow-sm)]">
+        <div className="mt-2 rounded-full bg-gradient-to-b from-amber-300 to-game-gold px-3 py-2.5 text-center text-sm font-black text-amber-950 shadow-[var(--game-shadow-sm)]">
           今すべきこと: {actionLabel}
         </div>
       )}

@@ -93,7 +93,7 @@ export function Leaderboard({ eventId }: { eventId: string }) {
 
   return (
     <div className="mt-6 space-y-4">
-      <GamePanel title="順位(資産額)" icon="🏆" accent="gold">
+      <GamePanel title="順位(資産額)" icon="🏆" accent="gold" collapsible defaultOpen>
         {myRankDelta && (
           <div className="mb-2 flex justify-end">
             <span className={myRankDelta === "up" ? "anim-pop" : "anim-shake"}>
