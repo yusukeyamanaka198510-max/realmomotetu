@@ -13,6 +13,7 @@ import {
 } from "@/lib/game/types";
 import { GameBadge, GameButton, GamePanel } from "@/components/game-ui";
 import { formatYen } from "@/lib/game/format";
+import { useDiceCard } from "./DiceCardContext";
 
 export type OwnedCard = {
   card_id: string;
@@ -85,6 +86,7 @@ export function CardPanel({
   ownProperties: OwnProperty[];
 }) {
   const router = useRouter();
+  const { dicePhase, rollCardDice } = useDiceCard();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastMessage, setLastMessage] = useState<string | null>(null);
@@ -161,9 +163,27 @@ export function CardPanel({
     router.refresh();
   }
 
+  async function handleUseMovementDiceCard(card: OwnedCard) {
+    if (!window.confirm(`${card.name}を使用しますか?`)) return;
+    setBusy(true);
+    setError(null);
+    setLastMessage(null);
+    const { error, message } = await rollCardDice(card.card_code);
+    setBusy(false);
+    if (error) {
+      setError(error);
+      return;
+    }
+    setLastMessage(message ?? `${card.name}を使用しました。`);
+  }
+
   function handleUseClick(card: OwnedCard) {
     setError(null);
     setLastMessage(null);
+    if (card.effect_type === "MOVEMENT_DICE") {
+      void handleUseMovementDiceCard(card);
+      return;
+    }
     if (card.target_type === "OTHER_TEAM" || needsPayload(card)) {
       setPendingCard(card);
       setTargetTeamId("");
@@ -268,6 +288,10 @@ export function CardPanel({
         {(grouped.get(tab) ?? []).length === 0 && <p className="text-xs text-zinc-400">このカテゴリのカードはありません</p>}
         {(grouped.get(tab) ?? []).map((c) => {
           const usable = isLikelyUsable(c, state);
+          if (usable.ok && c.effect_type === "MOVEMENT_DICE" && dicePhase !== null) {
+            usable.ok = false;
+            usable.reason = "サイコロの演出中です";
+          }
           return (
             <div
               key={c.card_id}

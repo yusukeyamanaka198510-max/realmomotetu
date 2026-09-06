@@ -1,0 +1,105 @@
+"use client";
+
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import type { TeamGameState } from "@/lib/game/types";
+import type { DicePhase } from "./DiceAnimation";
+
+type DiceResult = { total: number; individual_results: number[] };
+
+type DiceCardValue = {
+  dicePhase: DicePhase | null;
+  canStopDice: boolean;
+  rollPlainDice: () => Promise<{ error?: string }>;
+  rollCardDice: (cardCode: string) => Promise<{ error?: string; message?: string }>;
+  stopDice: () => void;
+  diceLanded: () => void;
+};
+
+const DiceCardContext = createContext<DiceCardValue | null>(null);
+
+// 通常のサイコロを振る操作と、特急・急行・新幹線等の「サイコロ複数個カード」の使用が
+// 同じ演出(振る→止める→着地)を共有できるよう、TeamGameFlowとCardPanelの間でこの状態を共有する。
+export function DiceCardProvider({
+  initialState,
+  diceResult,
+  children,
+}: {
+  initialState: TeamGameState;
+  diceResult: DiceResult | null;
+  children: ReactNode;
+}) {
+  const router = useRouter();
+  const [dicePhase, setDicePhase] = useState<DicePhase | null>(null);
+  const [canStopDice, setCanStopDice] = useState(false);
+
+  useEffect(() => {
+    if (initialState === "DESTINATION_SELECTION") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- サーバー状態(initialState)への同期が目的の意図的な同期
+      setDicePhase((p) => p ?? "revealed");
+      // router.refresh()のPromiseはRSCペイロードが実際に反映される前に解決することがあるため、
+      // 「止める」を押せる判定はrefresh呼び出し自体ではなく、実際にdiceResultが届いた
+      // (=initialStateが本当にDESTINATION_SELECTIONへ切り替わった)ことで行う。
+      if (diceResult) {
+        setCanStopDice(true);
+      }
+    } else {
+      setDicePhase(null);
+      setCanStopDice(false);
+    }
+  }, [initialState, diceResult]);
+
+  async function rollPlainDice(): Promise<{ error?: string }> {
+    setCanStopDice(false);
+    setDicePhase("rolling");
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_roll_dice", { p_dice_count: 1 });
+    if (error) {
+      setDicePhase(null);
+      return { error: error.message };
+    }
+    router.refresh();
+    return {};
+  }
+
+  async function rollCardDice(cardCode: string): Promise<{ error?: string; message?: string }> {
+    setCanStopDice(false);
+    setDicePhase("rolling");
+    const supabase = createClient();
+    const idempotencyKey = crypto.randomUUID();
+    const { data, error } = await supabase.rpc("fn_use_card", {
+      p_idempotency_key: idempotencyKey,
+      p_card_code: cardCode,
+      p_target_team_id: null,
+      p_payload: {},
+    });
+    if (error) {
+      setDicePhase(null);
+      return { error: error.message };
+    }
+    router.refresh();
+    const result = data as { message?: string } | null;
+    return { message: result?.message ?? undefined };
+  }
+
+  function stopDice() {
+    setDicePhase("landing");
+  }
+
+  function diceLanded() {
+    setDicePhase("revealed");
+  }
+
+  return (
+    <DiceCardContext.Provider value={{ dicePhase, canStopDice, rollPlainDice, rollCardDice, stopDice, diceLanded }}>
+      {children}
+    </DiceCardContext.Provider>
+  );
+}
+
+export function useDiceCard(): DiceCardValue {
+  const ctx = useContext(DiceCardContext);
+  if (!ctx) throw new Error("useDiceCard must be used within a DiceCardProvider");
+  return ctx;
+}

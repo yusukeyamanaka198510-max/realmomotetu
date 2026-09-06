@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getActor } from "@/lib/game/actor";
 import { createClient } from "@/lib/supabase/server";
 import { TeamGameFlow } from "./TeamGameFlow";
+import { DiceCardProvider } from "./DiceCardContext";
 import { Leaderboard } from "./Leaderboard";
 import { CardPanel, type OwnedCard } from "./CardPanel";
 import { BonusMissionPanel } from "./BonusMissionPanel";
@@ -310,34 +311,36 @@ export default async function TeamPage() {
       <DividendAnnouncementOverlay notifications={notifications ?? []} />
       <BombiiCurseOverlay notifications={notifications ?? []} myTeamName={actor.teamName} />
 
-      <TeamGameFlow
-        teamId={actor.teamId}
-        eventId={actor.eventId}
-        initialState={state?.state ?? "WAITING"}
-        nextStationName={nextStationName}
-        missionAttempt={missionAttempt}
-        offeredMissions={offeredMissions}
-        diceResult={diceResult}
-        reachableStations={reachableStations}
-        goalDistanceByStationId={goalDistanceByStationId}
-        coinBalance={state?.coin_balance_cache ?? 0}
-        properties={properties}
-        isEventOver={isEventOver}
-        isEventScheduled={isEventScheduled}
-      />
+      <DiceCardProvider initialState={(state?.state ?? "WAITING") as TeamGameState} diceResult={diceResult}>
+        <TeamGameFlow
+          teamId={actor.teamId}
+          eventId={actor.eventId}
+          initialState={state?.state ?? "WAITING"}
+          nextStationName={nextStationName}
+          missionAttempt={missionAttempt}
+          offeredMissions={offeredMissions}
+          diceResult={diceResult}
+          reachableStations={reachableStations}
+          goalDistanceByStationId={goalDistanceByStationId}
+          coinBalance={state?.coin_balance_cache ?? 0}
+          properties={properties}
+          isEventOver={isEventOver}
+          isEventScheduled={isEventScheduled}
+        />
 
-      {!isEventOver && <BonusMissionPanel teamId={actor.teamId} eventId={actor.eventId} attempt={bonusMissionAttempt} />}
+        {!isEventOver && <BonusMissionPanel teamId={actor.teamId} eventId={actor.eventId} attempt={bonusMissionAttempt} />}
 
-      <CardPanel
-        teamId={actor.teamId}
-        state={(state?.state ?? "WAITING") as TeamGameState}
-        cards={myCards}
-        otherTeams={otherTeamsRaw ?? []}
-        takeoverTargets={takeoverTargets}
-        exchangeableCards={exchangeableCardsRaw ?? []}
-        notifications={notifications ?? []}
-        ownProperties={properties}
-      />
+        <CardPanel
+          teamId={actor.teamId}
+          state={(state?.state ?? "WAITING") as TeamGameState}
+          cards={myCards}
+          otherTeams={otherTeamsRaw ?? []}
+          takeoverTargets={takeoverTargets}
+          exchangeableCards={exchangeableCardsRaw ?? []}
+          notifications={notifications ?? []}
+          ownProperties={properties}
+        />
+      </DiceCardProvider>
 
       <div id="leaderboard">
         <Leaderboard eventId={actor.eventId} />
