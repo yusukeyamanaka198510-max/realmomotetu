@@ -15,7 +15,6 @@ import { DestinationArrivalOverlay } from "./DestinationArrivalOverlay";
 import { DividendAnnouncementOverlay } from "./DividendAnnouncementOverlay";
 import { BombiiCurseOverlay } from "./BombiiCurseOverlay";
 import { GameStartIntro } from "./GameStartIntro";
-import { ActionHistory } from "./ActionHistory";
 import { TeamPositionMap, type LineTopology } from "./TeamPositionMap";
 
 export default async function TeamPage() {
@@ -272,8 +271,6 @@ export default async function TeamPage() {
         hasBombii={state?.has_bombii ?? false}
       />
       {event && <CountdownTimer eventId={event.id} endAt={event.end_at} status={event.status} />}
-      <PasswordChangePanel />
-      <TeamNameChangePanel currentName={actor.teamName} currentRepresentativeName={actor.representativeName} />
 
       <CardSlotOverlay notifications={notifications ?? []} />
       <DestinationArrivalOverlay notifications={notifications ?? []} />
@@ -315,7 +312,10 @@ export default async function TeamPage() {
 
       <TeamPositionMap lines={lineTopologies} stationNames={stationNames} />
 
-          <ActionHistory teamId={actor.teamId} />
+          <div className="mt-6 space-y-3">
+            <PasswordChangePanel />
+            <TeamNameChangePanel currentName={actor.teamName} currentRepresentativeName={actor.representativeName} />
+          </div>
         </div>
       </div>
     </div>

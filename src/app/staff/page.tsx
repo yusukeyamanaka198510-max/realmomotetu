@@ -8,7 +8,7 @@ import { EventControlPanel } from "./EventControlPanel";
 import { TeamAdminPanel } from "./TeamAdminPanel";
 import { DestinationQueuePanel } from "./DestinationQueuePanel";
 import { BonusMissionReviewQueue } from "./BonusMissionReviewQueue";
-import { CardUsageLogPanel } from "./CardUsageLogPanel";
+import { AdminActionLogPanel } from "./AdminActionLogPanel";
 import { LeaderboardSnapshotPanel } from "./LeaderboardSnapshotPanel";
 import { PasswordChangePanel } from "@/components/PasswordChangePanel";
 
@@ -129,6 +129,13 @@ export default async function StaffPage() {
     .eq("event_id", actor.eventId)
     .order("used_at", { ascending: false })
     .limit(30);
+
+  const { data: recentLedger } = await supabase
+    .from("coin_ledger")
+    .select("id, amount, transaction_type, reason, created_at, team:team_id(team_name)")
+    .eq("event_id", actor.eventId)
+    .order("created_at", { ascending: false })
+    .limit(40);
 
   const pendingCountByTeam = new Map<string, number>();
   for (const r of [...(queueRows ?? []), ...(missionQueueRows ?? []), ...(bonusMissionQueueRows ?? [])]) {
@@ -255,7 +262,7 @@ export default async function StaffPage() {
       <TeamAdminPanel teams={teamRows} stations={stations ?? []} allCards={allCards ?? []} />
 
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <CardUsageLogPanel logs={(recentUsageLog as any) ?? []} />
+      <AdminActionLogPanel ledger={(recentLedger as any) ?? []} cardLog={(recentUsageLog as any) ?? []} />
 
       <LeaderboardSnapshotPanel />
     </div>
