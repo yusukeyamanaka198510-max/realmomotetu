@@ -127,7 +127,7 @@ export function Leaderboard({ eventId }: { eventId: string }) {
                     <span className={r.rank <= 3 ? "text-base" : "text-xs text-zinc-400"}>
                       {RANK_MEDAL[r.rank] ?? `${r.rank}位`}
                     </span>
-                    {r.is_mine && r.team_name ? `${r.team_name}(あなた)` : r.rank <= 3 ? `${r.rank}位` : ""}
+                    {r.team_name ? `${r.team_name}${r.is_mine ? "(あなた)" : ""}` : r.rank <= 3 ? `${r.rank}位` : ""}
                   </span>
                   <span className="font-mono tabular-nums text-game-gold">{formatYen(r.coin_balance_cache)}</span>
                 </div>
