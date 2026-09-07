@@ -202,7 +202,7 @@ export default async function TeamPage() {
 
   const { data: myCardsRaw } = await supabase
     .from("team_cards")
-    .select("card_id, quantity, card:card_id(card_code, name, category, rarity, description, effect_type, target_type)")
+    .select("card_id, quantity, card:card_id(card_code, name, category, rarity, description, effect_type, effect_value, target_type)")
     .eq("team_id", actor.teamId)
     .gt("quantity", 0);
   const myCards: OwnedCard[] = (myCardsRaw ?? [])

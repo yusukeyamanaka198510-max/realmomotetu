@@ -11,8 +11,11 @@ type DiceResult = { total: number; individual_results: number[] };
 type DiceCardValue = {
   dicePhase: DicePhase | null;
   canStopDice: boolean;
+  // 回転演出中に表示すべきサイコロの個数(振ってすぐは実際の出目がまだ届いていないため、
+  // 個数だけ先に確定させておく。出目そのものは回転中は見えないため問題ない)。
+  rollingDiceCount: number;
   rollPlainDice: () => Promise<{ error?: string }>;
-  rollCardDice: (cardCode: string) => Promise<{ error?: string; message?: string }>;
+  rollCardDice: (cardCode: string, diceCount: number) => Promise<{ error?: string; message?: string }>;
   stopDice: () => void;
   diceLanded: () => void;
 };
@@ -33,6 +36,7 @@ export function DiceCardProvider({
   const router = useRouter();
   const [dicePhase, setDicePhase] = useState<DicePhase | null>(null);
   const [canStopDice, setCanStopDice] = useState(false);
+  const [rollingDiceCount, setRollingDiceCount] = useState(1);
 
   useEffect(() => {
     if (initialState === "DESTINATION_SELECTION") {
@@ -52,6 +56,7 @@ export function DiceCardProvider({
 
   async function rollPlainDice(): Promise<{ error?: string }> {
     setCanStopDice(false);
+    setRollingDiceCount(1);
     setDicePhase("rolling");
     const supabase = createClient();
     const { error } = await supabase.rpc("fn_roll_dice", { p_dice_count: 1 });
@@ -63,8 +68,9 @@ export function DiceCardProvider({
     return {};
   }
 
-  async function rollCardDice(cardCode: string): Promise<{ error?: string; message?: string }> {
+  async function rollCardDice(cardCode: string, diceCount: number): Promise<{ error?: string; message?: string }> {
     setCanStopDice(false);
+    setRollingDiceCount(diceCount);
     setDicePhase("rolling");
     const supabase = createClient();
     const idempotencyKey = crypto.randomUUID();
@@ -92,7 +98,7 @@ export function DiceCardProvider({
   }
 
   return (
-    <DiceCardContext.Provider value={{ dicePhase, canStopDice, rollPlainDice, rollCardDice, stopDice, diceLanded }}>
+    <DiceCardContext.Provider value={{ dicePhase, canStopDice, rollingDiceCount, rollPlainDice, rollCardDice, stopDice, diceLanded }}>
       {children}
     </DiceCardContext.Provider>
   );

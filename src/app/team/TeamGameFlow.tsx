@@ -67,13 +67,23 @@ export function TeamGameFlow({
   const [files, setFiles] = useState<File[]>([]);
   const [missionFiles, setMissionFiles] = useState<File[]>([]);
   const [stationQuery, setStationQuery] = useState("");
-  const { dicePhase, canStopDice, rollPlainDice, stopDice, diceLanded } = useDiceCard();
+  const { dicePhase, canStopDice, rollingDiceCount, rollPlainDice, stopDice, diceLanded } = useDiceCard();
+  // 振り始めた直後はサーバーの本当の出目(diceResult)がまだ届いていないことがあるため、
+  // 個数だけ先に確定させたrollingDiceCount分のダミー配列で個数のズレを防ぐ。
+  // 出目そのものは回転中は見えないため、着地(canStopDiceが立つ=diceResultが届いた後)までは
+  // 中身が不正確でも問題ない。
+  const rollingDiceValues =
+    diceResult && diceResult.individual_results.length === rollingDiceCount
+      ? diceResult.individual_results
+      : Array.from({ length: rollingDiceCount }, () => 1);
   const [missionFailureToast, setMissionFailureToast] = useState(false);
   const [slotReward, setSlotReward] = useState<SlotReward | null>(null);
   const [pendingRewardResult, setPendingRewardResult] = useState<ClaimRewardResult | null>(null);
   const [bombiiEncounter, setBombiiEncounter] = useState<{ type: string; amount: number; percent?: number } | null>(null);
   const [bombiiEscapeResult, setBombiiEscapeResult] = useState<{ roll: number; escaped: boolean; new_holder_team_name?: string } | null>(null);
   const selectedMission = offeredMissions.find((m) => m.id === missionAttempt?.selected_mission_id) ?? null;
+  // 「サイコロを振る」ボタンと回転演出は、周りの白い枠なしで背景イラストの上に直接見せる。
+  const hideOuterPanel = initialState === "DICE_READY" || dicePhase === "rolling" || dicePhase === "landing";
 
   // 失敗トーストを出すため、直前のstateを覚えておく
   // (MISSION_REVIEW → MISSION_ACTIVE への遷移だけが「失敗して再挑戦」を意味する)。
@@ -344,7 +354,13 @@ export function TeamGameFlow({
   }
 
   return (
-    <div className="mt-6 rounded border border-zinc-200 bg-white p-4 shadow-[var(--game-shadow-sm)] dark:border-zinc-800 dark:bg-zinc-900">
+    <div
+      className={
+        hideOuterPanel
+          ? "mt-6"
+          : "mt-6 rounded border border-zinc-200 bg-white p-4 shadow-[var(--game-shadow-sm)] dark:border-zinc-800 dark:bg-zinc-900"
+      }
+    >
       {slotReward && (
         <MissionRewardSlotOverlay
           reward={slotReward}
@@ -552,7 +568,7 @@ export function TeamGameFlow({
 
       {(initialState === "DICE_READY" || initialState === "DESTINATION_SELECTION") && (dicePhase === "rolling" || dicePhase === "landing") && (
         <div className="space-y-3">
-          <DiceAnimation phase={dicePhase} values={diceResult?.individual_results ?? [1]} onLanded={diceLanded} />
+          <DiceAnimation phase={dicePhase} values={rollingDiceValues} onLanded={diceLanded} />
           {dicePhase === "rolling" && (
             <GameButton onClick={stopDice} disabled={!canStopDice} variant="dice" size="lg" className="w-full">
               {canStopDice ? "⏹ 止める" : "🎲 振っています…"}

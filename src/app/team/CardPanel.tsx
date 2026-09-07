@@ -24,6 +24,7 @@ export type OwnedCard = {
   rarity: CardRarity;
   description: string;
   effect_type: string;
+  effect_value: Record<string, unknown>;
   target_type: CardTargetType;
 };
 
@@ -96,6 +97,17 @@ export function CardPanel({
   const [tab, setTab] = useState<CardCategory>("MOVEMENT");
   const [usingCard, setUsingCard] = useState<OwnedCard | null>(null);
   const [usePhase, setUsePhase] = useState<"activating" | "success" | null>(null);
+  const [pendingDiceMessage, setPendingDiceMessage] = useState<string | null>(null);
+
+  // サイコロ演出中に出目を含むメッセージを先に表示すると結果が見えてしまうため、
+  // 演出が「revealed」(着地済み)になってから表示する。
+  useEffect(() => {
+    if (dicePhase === "revealed" && pendingDiceMessage) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 演出(外部のdicePhase)が着地したタイミングへの意図的な同期
+      setLastMessage(pendingDiceMessage);
+      setPendingDiceMessage(null);
+    }
+  }, [dicePhase, pendingDiceMessage]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -164,38 +176,38 @@ export function CardPanel({
   }
 
   async function handleUseMovementDiceCard(card: OwnedCard) {
-    if (!window.confirm(`${card.name}を使用しますか?`)) return;
     setBusy(true);
     setError(null);
     setLastMessage(null);
-    const { error, message } = await rollCardDice(card.card_code);
+    setPendingDiceMessage(null);
+    const diceCount = Number(card.effect_value?.dice_count) || 1;
+    const { error, message } = await rollCardDice(card.card_code, diceCount);
     setBusy(false);
     if (error) {
       setError(error);
       return;
     }
-    setLastMessage(message ?? `${card.name}を使用しました。`);
+    setPendingDiceMessage(message ?? `${card.name}を使用しました。`);
   }
 
+  // ネイティブのwindow.confirm()はブラウザによって連続表示時に自動でダイアログを
+  // 抑制することがあり(押しても何も起きないように見える不具合の原因になった)、
+  // 常にこのパネル内蔵の確認UI(pendingCard)を経由させる。
   function handleUseClick(card: OwnedCard) {
     setError(null);
     setLastMessage(null);
-    if (card.effect_type === "MOVEMENT_DICE") {
-      void handleUseMovementDiceCard(card);
-      return;
-    }
-    if (card.target_type === "OTHER_TEAM" || needsPayload(card)) {
-      setPendingCard(card);
-      setTargetTeamId("");
-      setPayloadValue("");
-      return;
-    }
-    if (!window.confirm(`${card.name}を使用しますか?`)) return;
-    void executeUse(card, null, {});
+    setPendingCard(card);
+    setTargetTeamId("");
+    setPayloadValue("");
   }
 
   function handleConfirmPending() {
     if (!pendingCard) return;
+    if (pendingCard.effect_type === "MOVEMENT_DICE") {
+      setPendingCard(null);
+      void handleUseMovementDiceCard(pendingCard);
+      return;
+    }
     const payloadKind = needsPayload(pendingCard);
     if (pendingCard.target_type === "OTHER_TEAM" && !targetTeamId && payloadKind !== "takeover") {
       setError("対象チームを選択してください");
@@ -322,8 +334,9 @@ export function CardPanel({
       </div>
 
       {pendingCard && (
-        <div className="mt-3 rounded-xl border-2 border-zinc-300 p-3 dark:border-zinc-700">
-          <p className="text-sm font-bold">{pendingCard.name}を使用</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog">
+          <div className="anim-pop flex aspect-square w-full max-w-[280px] flex-col items-center justify-center overflow-y-auto rounded-[var(--game-radius-lg)] border-2 border-zinc-300 bg-white p-5 text-center shadow-[var(--game-shadow-lg)] dark:border-zinc-700 dark:bg-zinc-900">
+          <p className="text-base font-bold">{pendingCard.name}を使用</p>
           {pendingCard.target_type === "OTHER_TEAM" && needsPayload(pendingCard) !== "takeover" && (
             <select
               value={targetTeamId}
@@ -380,8 +393,8 @@ export function CardPanel({
               ))}
             </select>
           )}
-          <div className="mt-2 flex gap-2">
-            <GameButton disabled={busy} onClick={handleConfirmPending} variant="card" className="!px-3 !py-1.5 !text-xs">
+          <div className="mt-4 flex w-full flex-col gap-2">
+            <GameButton disabled={busy} onClick={handleConfirmPending} variant="card" className="w-full !py-3 !text-base">
               確定して使用
             </GameButton>
             <GameButton
@@ -391,10 +404,11 @@ export function CardPanel({
                 setError(null);
               }}
               variant="secondary"
-              className="!px-3 !py-1.5 !text-xs"
+              className="w-full !py-2 !text-sm"
             >
               キャンセル
             </GameButton>
+          </div>
           </div>
         </div>
       )}
