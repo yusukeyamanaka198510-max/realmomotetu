@@ -73,16 +73,19 @@ export default async function MyPage() {
       <GamePanel title={`保有不動産(不動産資産額: ${formatYen(propertyAssetTotal)})`} icon="🏠" accent="green">
         {activeProperties.length === 0 && <p className="text-xs text-zinc-400">まだ保有不動産はありません</p>}
         <ul className="space-y-1.5 text-sm">
-          {activeProperties.map((p) => (
-            <li key={p.id} className="rounded-lg bg-zinc-50 px-2.5 py-1.5 dark:bg-zinc-800/60">
-              <p className="font-bold">
-                {p.name} <span className="text-xs font-normal text-zinc-400">({p.stationName})</span>
-              </p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                購入額: {formatYen(p.pricePaid)} / 利回り: +{formatYen(p.yieldAmount)}(決算のたび)
-              </p>
-            </li>
-          ))}
+          {activeProperties.map((p) => {
+            const yieldPercent = p.pricePaid > 0 ? Math.round((p.yieldAmount / p.pricePaid) * 1000) / 10 : 0;
+            return (
+              <li key={p.id} className="rounded-lg bg-zinc-50 px-2.5 py-1.5 dark:bg-zinc-800/60">
+                <p className="font-bold">
+                  {p.name} <span className="text-xs font-normal text-zinc-400">({p.stationName})</span>
+                </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  購入額: {formatYen(p.pricePaid)} / 利回り: {yieldPercent}%(決算のたび)
+                </p>
+              </li>
+            );
+          })}
         </ul>
       </GamePanel>
     </div>
