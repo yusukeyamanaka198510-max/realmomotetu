@@ -48,8 +48,8 @@ export function BonusMissionPanel({
 
   async function handleSubmit() {
     if (!attempt) return;
-    if (files.length < 1 || files.length > 3) {
-      setError("写真は1〜3枚アップロードしてください");
+    if (files.length !== 1) {
+      setError("写真を1枚アップロードしてください");
       return;
     }
     setBusy(true);
@@ -93,11 +93,10 @@ export function BonusMissionPanel({
             <input
               type="file"
               accept="image/*"
-              multiple
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 3))}
+              onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 1))}
               className="hidden"
             />
-            {files.length > 0 ? `${files.length}枚選択済み(タップして変更)` : "タップして写真を選択"}
+            {files.length > 0 ? `${files.length}枚選択済み(タップして変更)` : "タップして写真を選択(1枚)"}
           </label>
           <GameButton onClick={handleSubmit} disabled={busy || files.length === 0} variant="card" className="w-full">
             {busy ? "提出中..." : "✨ ボーナスミッションを提出する"}
