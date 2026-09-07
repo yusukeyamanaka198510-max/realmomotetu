@@ -238,7 +238,14 @@ export function CardPanel({
   };
 
   return (
-    <GamePanel title={`所持カード(${cards.reduce((s, c) => s + c.quantity, 0)}枚)`} icon="🎴" accent="purple" className="mt-6">
+    <GamePanel
+      title={`所持カード(${cards.reduce((s, c) => s + c.quantity, 0)}枚)`}
+      icon="🎴"
+      accent="purple"
+      className="mt-6"
+      collapsible
+      defaultOpen
+    >
       {usingCard && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="status">
           <div

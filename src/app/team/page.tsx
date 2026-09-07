@@ -17,7 +17,6 @@ import { DestinationArrivalOverlay } from "./DestinationArrivalOverlay";
 import { DividendAnnouncementOverlay } from "./DividendAnnouncementOverlay";
 import { BombiiCurseOverlay } from "./BombiiCurseOverlay";
 import { GameStartIntro } from "./GameStartIntro";
-import { TeamPositionMap, type LineTopology } from "./TeamPositionMap";
 import { ScheduledStartCountdown } from "./ScheduledStartCountdown";
 
 export default async function TeamPage() {
@@ -256,17 +255,6 @@ export default async function TeamPage() {
     .eq("team_id", actor.teamId)
     .is("consumed_at", null);
 
-  const { data: linesRaw } = await supabase.from("lines").select("id, name").eq("event_id", actor.eventId);
-  const { data: edgesRaw } = await supabase.from("edges").select("line_id, station_a_id, station_b_id").eq("event_id", actor.eventId);
-  const { data: allStationsRaw } = await supabase.from("stations").select("id, name").eq("event_id", actor.eventId);
-  const stationNames: Record<string, string> = Object.fromEntries((allStationsRaw ?? []).map((s) => [s.id, s.name]));
-  const lineTopologies: LineTopology[] = (linesRaw ?? []).map((l) => ({
-    id: l.id,
-    name: l.name,
-    edges: (edgesRaw ?? [])
-      .filter((e) => e.line_id === l.id)
-      .map((e) => ({ a: e.station_a_id as string, b: e.station_b_id as string })),
-  }));
 
   // eslint-disable-next-line react-hooks/purity -- Server Componentがリクエスト時点のサーバー時刻で判定するのは意図通り
   const nowMs = Date.now();
@@ -345,8 +333,6 @@ export default async function TeamPage() {
       <div id="leaderboard">
         <Leaderboard eventId={actor.eventId} />
       </div>
-
-      <TeamPositionMap lines={lineTopologies} stationNames={stationNames} />
 
           <div className="mt-6 space-y-3">
             <PasswordChangePanel />

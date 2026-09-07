@@ -5,7 +5,13 @@ import { createClient } from "@/lib/supabase/client";
 import { GameBadge, GamePanel } from "@/components/game-ui";
 import { formatYen } from "@/lib/game/format";
 
-type LeaderboardRow = { rank: number; coin_balance_cache: number; team_name: string | null; is_mine: boolean };
+type LeaderboardRow = {
+  rank: number;
+  coin_balance_cache: number;
+  team_name: string | null;
+  station_name: string | null;
+  is_mine: boolean;
+};
 type GoalRow = { sequence_order: number; station_name: string; team_name: string | null; cleared_at: string };
 
 const RANK_MEDAL: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
@@ -122,14 +128,21 @@ export function Leaderboard({ eventId }: { eventId: string }) {
                   className={`absolute inset-y-0 left-0 ${r.is_mine ? "bg-amber-200/70 dark:bg-amber-800/50" : "bg-zinc-200/70 dark:bg-zinc-700/50"}`}
                   style={{ width: `${barPct}%` }}
                 />
-                <div className="relative flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
+                <div className="relative flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-1.5">
                     <span className={r.rank <= 3 ? "text-base" : "text-xs text-zinc-400"}>
                       {RANK_MEDAL[r.rank] ?? `${r.rank}位`}
                     </span>
-                    {r.team_name ? `${r.team_name}${r.is_mine ? "(あなた)" : ""}` : r.rank <= 3 ? `${r.rank}位` : ""}
+                    <span className="truncate">
+                      {r.team_name ? `${r.team_name}${r.is_mine ? "(あなた)" : ""}` : r.rank <= 3 ? `${r.rank}位` : ""}
+                    </span>
+                    {r.station_name && (
+                      <span className="shrink-0 rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-normal text-zinc-500 dark:bg-black/20 dark:text-zinc-400">
+                        📍{r.station_name}
+                      </span>
+                    )}
                   </span>
-                  <span className="font-mono tabular-nums text-game-gold">{formatYen(r.coin_balance_cache)}</span>
+                  <span className="shrink-0 font-mono tabular-nums text-game-gold">{formatYen(r.coin_balance_cache)}</span>
                 </div>
               </li>
             );
