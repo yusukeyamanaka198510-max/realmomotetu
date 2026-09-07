@@ -6,10 +6,12 @@ import { formatYen } from "@/lib/game/format";
 
 export type SlotReward =
   | { type: "COIN"; amount: number; bonusAmount?: number }
-  | { type: "CARD"; cardName: string; cardRarity: CardRarity };
+  | { type: "CARD"; cardName: string; cardRarity: CardRarity }
+  | { type: "TEAM"; teamName: string };
 
 const DECOY_AMOUNTS = [10000000, 15000000, 20000000, 25000000, 30000000];
 const DECOY_CARD_NAMES = ["急行カード", "牛歩カード", "宝くじカード", "半額カード", "絶好調カード", "カードバリア"];
+const DECOY_TEAM_NAMES = ["チームA", "チームB", "チームC", "チームD", "チームE", "チームF"];
 
 const RARITY_RING: Record<CardRarity, string> = {
   NORMAL: "border-zinc-400",
@@ -27,14 +29,16 @@ const SETTLE_DELAYS = [90, 120, 160, 220, 300, 420];
 
 export function MissionRewardSlotOverlay({ reward, onDone }: { reward: SlotReward; onDone: () => void }) {
   const [phase, setPhase] = useState<"spinning" | "settling" | "revealed">("spinning");
-  const [reelValue, setReelValue] = useState<string>(reward.type === "COIN" ? formatYen(DECOY_AMOUNTS[0]) : DECOY_CARD_NAMES[0]);
+  const [reelValue, setReelValue] = useState<string>(
+    reward.type === "COIN" ? formatYen(DECOY_AMOUNTS[0]) : reward.type === "TEAM" ? DECOY_TEAM_NAMES[0] : DECOY_CARD_NAMES[0]
+  );
   const spinIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hasStoppedRef = useRef(false);
 
   function pickDecoy() {
-    return reward.type === "COIN"
-      ? formatYen(DECOY_AMOUNTS[Math.floor(Math.random() * DECOY_AMOUNTS.length)])
-      : DECOY_CARD_NAMES[Math.floor(Math.random() * DECOY_CARD_NAMES.length)];
+    if (reward.type === "COIN") return formatYen(DECOY_AMOUNTS[Math.floor(Math.random() * DECOY_AMOUNTS.length)]);
+    if (reward.type === "TEAM") return DECOY_TEAM_NAMES[Math.floor(Math.random() * DECOY_TEAM_NAMES.length)];
+    return DECOY_CARD_NAMES[Math.floor(Math.random() * DECOY_CARD_NAMES.length)];
   }
 
   useEffect(() => {
@@ -58,7 +62,7 @@ export function MissionRewardSlotOverlay({ reward, onDone }: { reward: SlotRewar
         i++;
         setTimeout(tick, SETTLE_DELAYS[i - 1]);
       } else {
-        setReelValue(reward.type === "COIN" ? formatYen(reward.amount) : reward.cardName);
+        setReelValue(reward.type === "COIN" ? formatYen(reward.amount) : reward.type === "TEAM" ? reward.teamName : reward.cardName);
         setTimeout(() => setPhase("revealed"), 350);
       }
     };
@@ -67,13 +71,20 @@ export function MissionRewardSlotOverlay({ reward, onDone }: { reward: SlotRewar
 
   const spinning = phase === "spinning" || phase === "settling";
   const isCoin = reward.type === "COIN";
-  const ringClass = !spinning && !isCoin ? RARITY_RING[reward.cardRarity] : "border-zinc-400";
+  const isTeam = reward.type === "TEAM";
+  const ringClass = !spinning && reward.type === "CARD" ? RARITY_RING[reward.cardRarity] : "border-zinc-400";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/60" role="status">
       <div
         className={`relative w-64 overflow-hidden rounded-[var(--game-radius-lg)] border-4 bg-white p-5 text-center shadow-[var(--game-shadow-lg)] dark:bg-zinc-900 ${
-          spinning ? "border-zinc-400" : isCoin ? "border-game-gold anim-card-fly-in" : `${ringClass} anim-card-fly-in`
+          spinning
+            ? "border-zinc-400"
+            : isCoin
+              ? "border-game-gold anim-card-fly-in"
+              : isTeam
+                ? "border-purple-500 anim-card-fly-in"
+                : `${ringClass} anim-card-fly-in`
         }`}
       >
         {!spinning && (
@@ -84,19 +95,19 @@ export function MissionRewardSlotOverlay({ reward, onDone }: { reward: SlotRewar
           />
         )}
         <p className={`relative text-xs font-bold uppercase tracking-wide ${isCoin ? "text-game-gold" : "text-game-purple"}`}>
-          {isCoin ? "🪙コイン獲得!" : "🎴カード獲得!"}
+          {isCoin ? "🪙コイン獲得!" : isTeam ? "😈なすりつけ先決定!" : "🎴カード獲得!"}
         </p>
         <div className="relative mt-3 flex h-16 items-center justify-center overflow-hidden rounded-xl bg-zinc-100 px-2 dark:bg-zinc-800">
           <p className={`font-bold ${spinning ? "text-zinc-400 blur-[1px]" : isCoin ? "text-2xl text-game-gold" : "text-lg text-zinc-900 dark:text-zinc-50"}`}>
             {reelValue}
           </p>
         </div>
-        {!spinning && !isCoin && (
+        {!spinning && reward.type === "CARD" && (
           <span className={`relative mt-3 inline-block rounded-full px-3 py-1 text-xs font-bold ${RARITY_BG[reward.cardRarity]}`}>
             {CARD_RARITY_LABELS[reward.cardRarity]}
           </span>
         )}
-        {!spinning && isCoin && reward.bonusAmount && (
+        {!spinning && reward.type === "COIN" && reward.bonusAmount && (
           <p className="anim-pop relative mt-2 rounded-full bg-gradient-to-b from-amber-300 to-game-gold px-3 py-1 text-xs font-black text-amber-950">
             💰お金の神様ボーナス +{formatYen(reward.bonusAmount)}!
           </p>

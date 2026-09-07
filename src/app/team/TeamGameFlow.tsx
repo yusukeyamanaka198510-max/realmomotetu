@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { EVIDENCE_BUCKET, arrivalPhotoPath, missionPhotoPath } from "@/lib/game/storage";
 import type { TeamGameState } from "@/lib/game/types";
 import { formatYen } from "@/lib/game/format";
-import { DiceAnimation } from "./DiceAnimation";
+import { DiceAnimation, type DicePhase } from "./DiceAnimation";
 import { MissionRewardSlotOverlay, type SlotReward } from "./MissionRewardSlotOverlay";
 import { useDiceCard } from "./DiceCardContext";
 import { GameButton } from "@/components/game-ui";
@@ -78,9 +78,13 @@ export function TeamGameFlow({
       : Array.from({ length: rollingDiceCount }, () => 1);
   const [missionFailureToast, setMissionFailureToast] = useState(false);
   const [slotReward, setSlotReward] = useState<SlotReward | null>(null);
-  const [pendingRewardResult, setPendingRewardResult] = useState<ClaimRewardResult | null>(null);
-  const [bombiiEncounter, setBombiiEncounter] = useState<{ type: string; amount: number; percent?: number } | null>(null);
-  const [bombiiEscapeResult, setBombiiEscapeResult] = useState<{ roll: number; escaped: boolean; new_holder_team_name?: string } | null>(null);
+  // 報酬を通常通り見せた後にボンビーの悪さを発生させるため、悪さの情報は一旦ここに保留しておく。
+  const [pendingBombii, setPendingBombii] = useState<{ type: string; amount: number; percent?: number } | null>(null);
+  const [bombiiStage, setBombiiStage] = useState<"announce" | "detail" | "escape" | "team_slot" | null>(null);
+  const [bombiiInfo, setBombiiInfo] = useState<{ type: string; amount: number; percent?: number } | null>(null);
+  const [escapeDicePhase, setEscapeDicePhase] = useState<DicePhase | null>(null);
+  const [escapeCanStop, setEscapeCanStop] = useState(false);
+  const [escapeRoll, setEscapeRoll] = useState<{ roll: number; escaped: boolean; new_holder_team_name?: string } | null>(null);
   const selectedMission = offeredMissions.find((m) => m.id === missionAttempt?.selected_mission_id) ?? null;
   // 「サイコロを振る」ボタンと回転演出は、周りの白い枠なしで背景イラストの上に直接見せる。
   const hideOuterPanel = initialState === "DICE_READY" || dicePhase === "rolling" || dicePhase === "landing";
@@ -310,25 +314,60 @@ export function TeamGameFlow({
       return;
     }
     const result = data as ClaimRewardResult;
+    // ボンビーの悪さが発生していても、まずは通常通り報酬を見せる。
+    // 悪さの演出は報酬の演出が終わった後(MissionRewardSlotOverlayのonDone)に始める。
     if (result.bombii) {
-      // ボンビーの悪さが発生した場合は先にその演出を見せ、確認後に本来の報酬を表示する。
-      setPendingRewardResult(result);
-      setBombiiEncounter(result.bombii);
-    } else {
-      revealReward(result);
+      setPendingBombii(result.bombii);
     }
+    revealReward(result);
+  }
+
+  function startBombiiFlow() {
+    if (!pendingBombii) {
+      router.refresh();
+      return;
+    }
+    setBombiiInfo(pendingBombii);
+    setPendingBombii(null);
+    setBombiiStage("announce");
+  }
+
+  function finishBombiiFlow() {
+    setBombiiStage(null);
+    setBombiiInfo(null);
+    setEscapeDicePhase(null);
+    setEscapeCanStop(false);
+    setEscapeRoll(null);
+    router.refresh();
   }
 
   async function handleBombiiEscapeRoll() {
     setBusy(true);
+    setEscapeDicePhase("rolling");
     const supabase = createClient();
     const { data, error } = await supabase.rpc("fn_bombii_escape_roll");
     setBusy(false);
     if (error) {
       setError(error.message);
+      setEscapeDicePhase(null);
       return;
     }
-    setBombiiEscapeResult(data as { roll: number; escaped: boolean; new_holder_team_name?: string });
+    // このRPCは出目・結果を既に確定させた状態で返す(dice_rolls経由の非同期反映を待つ必要がない)ため、
+    // 通常のサイコロと違いrouter.refresh()を待たずそのまま「止める」を有効化してよい。
+    setEscapeRoll(data as { roll: number; escaped: boolean; new_holder_team_name?: string });
+    setEscapeCanStop(true);
+  }
+
+  function handleEscapeDiceLanded() {
+    setEscapeDicePhase("revealed");
+  }
+
+  function handleEscapeNext() {
+    if (escapeRoll?.escaped) {
+      setBombiiStage("team_slot");
+    } else {
+      finishBombiiFlow();
+    }
   }
 
   if (isEventOver) {
@@ -366,51 +405,88 @@ export function TeamGameFlow({
           reward={slotReward}
           onDone={() => {
             setSlotReward(null);
-            router.refresh();
+            startBombiiFlow();
           }}
         />
       )}
 
-      {bombiiEncounter && (
+      {bombiiStage === "announce" && (
+        <div role="alertdialog" className="fixed inset-0 z-[65] flex flex-col items-center justify-center bg-black/80 px-6">
+          <div className="anim-shake w-full max-w-xs rounded-[var(--game-radius-lg)] border-4 border-purple-500 bg-white p-6 text-center shadow-[var(--game-shadow-lg)] dark:bg-zinc-900">
+            <p className="text-4xl">😈</p>
+            <p className="game-text-event mt-2 text-xl text-purple-700 dark:text-purple-300">ボンビーの悪さが発生しました!</p>
+            <GameButton onClick={() => setBombiiStage("detail")} variant="primary" className="mt-4 w-full">
+              確認
+            </GameButton>
+          </div>
+        </div>
+      )}
+
+      {bombiiStage === "detail" && bombiiInfo && (
         <div role="alertdialog" className="fixed inset-0 z-[65] flex flex-col items-center justify-center bg-black/80 px-6">
           <div className="w-full max-w-xs rounded-[var(--game-radius-lg)] border-4 border-purple-500 bg-white p-6 text-center shadow-[var(--game-shadow-lg)] dark:bg-zinc-900">
             <p className="text-4xl">😈</p>
             <p className="game-text-event mt-2 text-xl text-purple-700 dark:text-purple-300">ボンビーの悪さ!</p>
             <p className="mt-2 text-sm">
-              {bombiiEncounter.type === "PROPERTY_SOLD"
-                ? `不動産を強制的に安売りさせられました(+${formatYen(bombiiEncounter.amount)}だけ手元に)`
-                : bombiiEncounter.amount > 0
-                  ? `現金の${bombiiEncounter.percent}%(${formatYen(bombiiEncounter.amount)})を奪われました`
+              {bombiiInfo.type === "PROPERTY_SOLD"
+                ? `不動産を強制的に安売りさせられました(+${formatYen(bombiiInfo.amount)}だけ手元に)`
+                : bombiiInfo.amount > 0
+                  ? `現金の${bombiiInfo.percent}%(${formatYen(bombiiInfo.amount)})を奪われました`
                   : "手持ちの現金がなく、被害はありませんでした"}
             </p>
-            {bombiiEscapeResult === null ? (
-              <GameButton onClick={handleBombiiEscapeRoll} disabled={busy} variant="dice" className="mt-4 w-full">
-                🎲 撃退チャレンジ(サイコロを振る)
-              </GameButton>
-            ) : (
-              <div className="mt-4 space-y-2">
-                <p className="text-2xl font-black">🎲 {bombiiEscapeResult.roll}</p>
-                <p className={`text-sm font-bold ${bombiiEscapeResult.escaped ? "text-emerald-600" : "text-zinc-500"}`}>
-                  {bombiiEscapeResult.escaped
-                    ? `撃退成功!「${bombiiEscapeResult.new_holder_team_name}」になすりつけました`
-                    : "撃退失敗…まだボンビーが憑いています"}
-                </p>
+            <GameButton
+              onClick={() => {
+                setBombiiStage("escape");
+                void handleBombiiEscapeRoll();
+              }}
+              disabled={busy}
+              variant="dice"
+              className="mt-4 w-full"
+            >
+              🎲 撃退チャレンジ(サイコロを振る)
+            </GameButton>
+          </div>
+        </div>
+      )}
+
+      {bombiiStage === "escape" && (
+        <div role="alertdialog" className="fixed inset-0 z-[65] flex flex-col items-center justify-center bg-black/80 px-6">
+          <div className="w-full max-w-xs rounded-[var(--game-radius-lg)] border-4 border-purple-500 bg-white p-6 text-center shadow-[var(--game-shadow-lg)] dark:bg-zinc-900">
+            <p className="game-text-event text-xl text-purple-700 dark:text-purple-300">撃退チャレンジ</p>
+            {(escapeDicePhase === "rolling" || escapeDicePhase === "landing") && (
+              <div className="mt-3 space-y-3">
+                <DiceAnimation phase={escapeDicePhase} values={[escapeRoll?.roll ?? 1]} onLanded={handleEscapeDiceLanded} />
                 <GameButton
-                  onClick={() => {
-                    setBombiiEncounter(null);
-                    setBombiiEscapeResult(null);
-                    if (pendingRewardResult) revealReward(pendingRewardResult);
-                    setPendingRewardResult(null);
-                  }}
-                  variant="primary"
+                  onClick={() => setEscapeDicePhase("landing")}
+                  disabled={!escapeCanStop}
+                  variant="dice"
+                  size="lg"
                   className="w-full"
                 >
+                  {escapeCanStop ? "⏹ 止める" : "🎲 振っています…"}
+                </GameButton>
+              </div>
+            )}
+            {escapeDicePhase === "revealed" && escapeRoll && (
+              <div className="mt-3 space-y-3">
+                <DiceAnimation phase="revealed" values={[escapeRoll.roll]} />
+                <p className={`text-sm font-bold ${escapeRoll.escaped ? "text-emerald-600" : "text-zinc-500"}`}>
+                  {escapeRoll.escaped ? "撃退成功!なすりつけ先を決めます" : "撃退失敗…まだボンビーが憑いています"}
+                </p>
+                <GameButton onClick={handleEscapeNext} variant="primary" className="w-full">
                   つぎへ
                 </GameButton>
               </div>
             )}
           </div>
         </div>
+      )}
+
+      {bombiiStage === "team_slot" && escapeRoll?.new_holder_team_name && (
+        <MissionRewardSlotOverlay
+          reward={{ type: "TEAM", teamName: escapeRoll.new_holder_team_name }}
+          onDone={finishBombiiFlow}
+        />
       )}
 
       {missionFailureToast && (
