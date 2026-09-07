@@ -10,6 +10,7 @@ type LeaderboardRow = {
   coin_balance_cache: number;
   team_name: string | null;
   station_name: string | null;
+  has_bombii: boolean;
   is_mine: boolean;
 };
 type GoalRow = { sequence_order: number; station_name: string; team_name: string | null; cleared_at: string };
@@ -136,6 +137,7 @@ export function Leaderboard({ eventId }: { eventId: string }) {
                     <span className="truncate">
                       {r.team_name ? `${r.team_name}${r.is_mine ? "(あなた)" : ""}` : r.rank <= 3 ? `${r.rank}位` : ""}
                     </span>
+                    {r.has_bombii && <span title="ボンビーが取り憑いています">😈</span>}
                     {r.station_name && (
                       <span className="shrink-0 rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-normal text-zinc-500 dark:bg-black/20 dark:text-zinc-400">
                         📍{r.station_name}
