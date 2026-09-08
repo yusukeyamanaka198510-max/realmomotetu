@@ -45,9 +45,8 @@ export function TeamAdminPanel({ teams, stations, allCards = [] }: { teams: Team
   }
 
   return (
-    <div className="mt-4">
-      <h2 className="text-lg font-semibold">チーム個別操作</h2>
-      <div className="mt-2 space-y-2">
+    <div>
+      <div className="space-y-2">
         {teams.map((t) => (
           <div key={t.id} className="rounded border border-zinc-200 dark:border-zinc-800">
             <button

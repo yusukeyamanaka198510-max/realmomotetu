@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { staffBtn } from "./StaffUI";
 
 type HistoryRow = {
   id: string;
@@ -31,16 +32,6 @@ export function DestinationQueuePanel({
 
   const candidates = stations.filter((s) => s.is_destination_candidate);
 
-  async function handleRandomize() {
-    if (!window.confirm("現在のゴールを、条件を満たす駅の中からランダムに選び直します。よろしいですか?")) return;
-    setBusy(true);
-    const supabase = createClient();
-    const { error } = await supabase.rpc("fn_admin_randomize_next_destination");
-    setBusy(false);
-    if (error) return window.alert(error.message);
-    router.refresh();
-  }
-
   async function handleManualSet() {
     if (!manualStationId) return;
     if (!window.confirm("このゴールを手動で設定します。よろしいですか?")) return;
@@ -54,27 +45,23 @@ export function DestinationQueuePanel({
   }
 
   return (
-    <div className="mt-4">
-      <h2 className="text-lg font-semibold">最終目的地(ゴール)</h2>
+    <div>
       <p className="text-xs text-zinc-500">
         ゴール到達時、次のゴールは自動的に「全チームの現在駅・移動先確定済みの駅」を除いた候補からランダムに選ばれます(ゴール候補は「駅・路線・ミッション管理」画面のチェックボックスで設定)。
       </p>
-      <div className="mt-2 rounded border border-zinc-200 p-3 dark:border-zinc-800">
-        <p className="text-sm">
-          現在のゴール: <span className="font-semibold">{activeStationName ?? "未設定"}</span>(ボーナス {defaultBonus.toLocaleString()} コイン)
+      <div className="mt-2 rounded-xl bg-zinc-50 p-3 dark:bg-zinc-800/60">
+        <p className="text-base">
+          現在のゴール: <span className="font-bold text-game-navy dark:text-game-gold">{activeStationName ?? "未設定"}</span>
+          <span className="text-sm text-zinc-500">(ボーナス {defaultBonus.toLocaleString()} コイン)</span>
+        </p>
+        <p className="mt-2 text-xs text-zinc-500">
+          通常は到達時に自動で次のゴールが決まります。到達不能な駅になっている場合や、到達済みなのに更新されない場合のみ、下から手動で修正してください。
         </p>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-          <button
-            onClick={handleRandomize}
-            disabled={busy}
-            className="rounded bg-zinc-900 px-3 py-1.5 text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
-          >
-            ランダムに選び直す
-          </button>
           <select
             value={manualStationId}
             onChange={(e) => setManualStationId(e.target.value)}
-            className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+            className="rounded-xl border-2 border-zinc-300 px-2 py-2 dark:border-zinc-700 dark:bg-zinc-800"
           >
             <option value="">駅を手動指定...</option>
             {candidates.map((s) => (
@@ -83,12 +70,8 @@ export function DestinationQueuePanel({
               </option>
             ))}
           </select>
-          <button
-            onClick={handleManualSet}
-            disabled={busy || !manualStationId}
-            className="rounded border border-zinc-300 px-3 py-1.5 disabled:opacity-50 dark:border-zinc-700"
-          >
-            手動設定
+          <button onClick={handleManualSet} disabled={busy || !manualStationId} className={staffBtn.neutral}>
+            手動設定(例外対応)
           </button>
         </div>
       </div>

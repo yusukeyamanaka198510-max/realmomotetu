@@ -11,6 +11,7 @@ import { BonusMissionReviewQueue } from "./BonusMissionReviewQueue";
 import { AdminActionLogPanel } from "./AdminActionLogPanel";
 import { LeaderboardSnapshotPanel } from "./LeaderboardSnapshotPanel";
 import { PasswordChangePanel } from "@/components/PasswordChangePanel";
+import { StaffSection } from "./StaffUI";
 
 export default async function StaffPage() {
   const actor = await getActor();
@@ -21,7 +22,7 @@ export default async function StaffPage() {
   const { data: event } = await supabase
     .from("events")
     .select(
-      "id, name, status, start_at, end_at, time_limit_minutes, default_destination_bonus_amount, leaderboard_hide_minutes_before_end, obstruction_cooldown_seconds, active_destination_station_id, active_destination:active_destination_station_id(name), dividend_interval_minutes, last_dividend_run_at, scheduled_start_at"
+      "id, name, status, start_at, end_at, time_limit_minutes, default_destination_bonus_amount, leaderboard_hide_minutes_before_end, obstruction_cooldown_seconds, active_destination_station_id, active_destination:active_destination_station_id(name), dividend_interval_minutes, last_dividend_run_at, scheduled_start_at, auto_start_enabled, auto_start_time_limit_minutes, auto_start_end_at"
     )
     .eq("id", actor.eventId)
     .single();
@@ -175,10 +176,19 @@ export default async function StaffPage() {
   const maxCoin = teamRows.length ? Math.max(...teamRows.map((t) => t.coin_balance_cache)) : null;
   const topTeams = maxCoin !== null ? teamRows.filter((t) => t.coin_balance_cache === maxCoin) : [];
 
+  const totalPending = pendingArrivals.length + pendingMissions.length + pendingBonusMissions.length;
+
   return (
     <div className="mx-auto max-w-3xl p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">本部ダッシュボード({actor.displayName})</h1>
+        <h1 className="text-xl font-semibold">
+          本部ダッシュボード({actor.displayName})
+          {totalPending > 0 && (
+            <span className="ml-2 rounded-full bg-red-600 px-2 py-0.5 align-middle text-xs font-bold text-white">
+              承認待ち {totalPending}件
+            </span>
+          )}
+        </h1>
         <div className="flex gap-4">
           <Link href="/staff/manage" className="text-sm text-zinc-500 hover:underline">
             駅・路線・ミッション管理 →
@@ -189,77 +199,89 @@ export default async function StaffPage() {
         </div>
       </div>
 
-      <PasswordChangePanel />
+      {/* 触る頻度の高い操作(承認キュー)を上位に、開始/終了などの設定系は下に配置している。 */}
 
-      {event && <EventControlPanel event={event} topTeams={topTeams} />}
+      <StaffSection icon="🚩" title="到着確認待ち" count={pendingArrivals.length} accent="amber">
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <ArrivalReviewQueue eventId={actor.eventId} initialItems={(pendingArrivals as any) ?? []} />
+      </StaffSection>
 
-      <div className="mt-6 overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead>
-            <tr className="border-b text-left">
-              <th className="py-2">No</th>
-              <th>チーム名</th>
-              <th>代表者</th>
-              <th>現在地</th>
-              <th>state</th>
-              <th>コイン</th>
-              <th>最終操作</th>
-              <th>承認待ち</th>
-              <th>状況</th>
-            </tr>
-          </thead>
-          <tbody>
-            {teamRows.map((t, i) => {
-              const highlight = t.state === "ARRIVAL_REVIEW" || t.state === "MISSION_REVIEW";
-              return (
-                <tr
-                  key={t.id}
-                  className={`border-b ${t.isStuck ? "bg-red-50 dark:bg-red-950" : highlight ? "bg-amber-50 dark:bg-amber-950" : ""}`}
-                >
-                  <td className="py-2">{i + 1}</td>
-                  <td>{t.team_name}</td>
-                  <td className="text-zinc-500">{t.representative_name ?? "-"}</td>
-                  <td>{t.currentStationName}</td>
-                  <td className={highlight ? "font-semibold" : ""}>{t.state}</td>
-                  <td>{t.coin_balance_cache.toLocaleString()}</td>
-                  <td>{t.updatedAgoMinutes !== null ? `${t.updatedAgoMinutes}分前` : "-"}</td>
-                  <td>{t.pendingCount > 0 ? <span className="font-semibold text-amber-700 dark:text-amber-400">{t.pendingCount}件</span> : "-"}</td>
-                  <td>
-                    {t.isPaused && <span className="rounded bg-zinc-500 px-1.5 py-0.5 text-xs text-white">一時停止</span>}
-                    {t.isStuck && <span className="ml-1 rounded bg-red-600 px-1.5 py-0.5 text-xs text-white">要確認</span>}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <p className="mt-1 text-xs text-zinc-400">「要確認」は20分以上操作がないチーム(一時停止中を除く)。目安なので実際の状況は個別に確認してください。</p>
+      <StaffSection icon="🎯" title="ミッション判定待ち" count={pendingMissions.length} accent="sky">
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <MissionReviewQueue eventId={actor.eventId} initialItems={(pendingMissions as any) ?? []} />
+      </StaffSection>
 
-      <h2 className="mt-8 text-lg font-semibold">到着確認待ち</h2>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <ArrivalReviewQueue eventId={actor.eventId} initialItems={(pendingArrivals as any) ?? []} />
-
-      <h2 className="mt-8 text-lg font-semibold">ミッション判定待ち</h2>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <MissionReviewQueue eventId={actor.eventId} initialItems={(pendingMissions as any) ?? []} />
+      <StaffSection icon="✨" title="ボーナスミッション判定待ち" count={pendingBonusMissions.length} accent="fuchsia">
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <BonusMissionReviewQueue eventId={actor.eventId} initialItems={(pendingBonusMissions as any) ?? []} />
+      </StaffSection>
 
       {event && (
-        <DestinationQueuePanel
-          // @ts-expect-error 1:1リレーションが配列型で推論されるため
-          activeStationName={event.active_destination?.name ?? null}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          history={(destinationHistory as any) ?? []}
-          stations={stations ?? []}
-          defaultBonus={event.default_destination_bonus_amount}
-        />
+        <StaffSection icon="🏁" title="最終目的地(ゴール)" accent="indigo">
+          <DestinationQueuePanel
+            // @ts-expect-error 1:1リレーションが配列型で推論されるため
+            activeStationName={event.active_destination?.name ?? null}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            history={(destinationHistory as any) ?? []}
+            stations={stations ?? []}
+            defaultBonus={event.default_destination_bonus_amount}
+          />
+        </StaffSection>
       )}
 
-      <h2 className="mt-8 text-lg font-semibold">ボーナスミッション判定待ち</h2>
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <BonusMissionReviewQueue eventId={actor.eventId} initialItems={(pendingBonusMissions as any) ?? []} />
+      <StaffSection icon="📋" title="チーム一覧・状況" accent="zinc">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead>
+              <tr className="border-b text-left">
+                <th className="py-2">No</th>
+                <th>チーム名</th>
+                <th>代表者</th>
+                <th>現在地</th>
+                <th>state</th>
+                <th>コイン</th>
+                <th>最終操作</th>
+                <th>承認待ち</th>
+                <th>状況</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamRows.map((t, i) => {
+                const highlight = t.state === "ARRIVAL_REVIEW" || t.state === "MISSION_REVIEW";
+                return (
+                  <tr
+                    key={t.id}
+                    className={`border-b ${t.isStuck ? "bg-red-50 dark:bg-red-950" : highlight ? "bg-amber-50 dark:bg-amber-950" : ""}`}
+                  >
+                    <td className="py-2">{i + 1}</td>
+                    <td>{t.team_name}</td>
+                    <td className="text-zinc-500">{t.representative_name ?? "-"}</td>
+                    <td>{t.currentStationName}</td>
+                    <td className={highlight ? "font-semibold" : ""}>{t.state}</td>
+                    <td>{t.coin_balance_cache.toLocaleString()}</td>
+                    <td>{t.updatedAgoMinutes !== null ? `${t.updatedAgoMinutes}分前` : "-"}</td>
+                    <td>{t.pendingCount > 0 ? <span className="font-semibold text-amber-700 dark:text-amber-400">{t.pendingCount}件</span> : "-"}</td>
+                    <td>
+                      {t.isPaused && <span className="rounded bg-zinc-500 px-1.5 py-0.5 text-xs text-white">一時停止</span>}
+                      {t.isStuck && <span className="ml-1 rounded bg-red-600 px-1.5 py-0.5 text-xs text-white">要確認</span>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-1 text-xs text-zinc-400">「要確認」は20分以上操作がないチーム(一時停止中を除く)。目安なので実際の状況は個別に確認してください。</p>
+      </StaffSection>
 
-      <TeamAdminPanel teams={teamRows} stations={stations ?? []} allCards={allCards ?? []} />
+      <StaffSection icon="🛠️" title="チーム個別操作" accent="zinc">
+        <TeamAdminPanel teams={teamRows} stations={stations ?? []} allCards={allCards ?? []} />
+      </StaffSection>
+
+      <StaffSection icon="⚙️" title="イベント制御(開始/終了/各種設定)" accent="zinc">
+        <PasswordChangePanel />
+        {event && <EventControlPanel event={event} topTeams={topTeams} />}
+      </StaffSection>
 
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <AdminActionLogPanel ledger={(recentLedger as any) ?? []} cardLog={(recentUsageLog as any) ?? []} />

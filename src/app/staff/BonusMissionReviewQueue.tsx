@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { EVIDENCE_BUCKET } from "@/lib/game/storage";
+import { staffBtn } from "./StaffUI";
 
 type ReviewItem = {
   id: string;
@@ -65,19 +66,19 @@ export function BonusMissionReviewQueue({ eventId, initialItems }: { eventId: st
   }
 
   if (initialItems.length === 0) {
-    return <p className="mt-2 text-sm text-zinc-500">現在、判定待ちのボーナスミッションはありません</p>;
+    return <p className="text-sm text-zinc-500">現在、判定待ちのボーナスミッションはありません</p>;
   }
 
   return (
-    <ul className="mt-2 space-y-4">
+    <ul className="space-y-4">
       {initialItems.map((item) => {
         const attempt = item.team_bonus_mission_attempts;
         if (!attempt) return null;
         return (
-          <li key={item.id} className="rounded border border-fuchsia-300 bg-fuchsia-50 p-4 dark:bg-fuchsia-950">
-            <div className="flex items-center justify-between">
+          <li key={item.id} className="rounded-xl border-2 border-fuchsia-300 bg-fuchsia-50 p-4 dark:bg-fuchsia-950">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="font-medium">{item.teams?.team_name ?? "-"}</p>
+                <p className="text-lg font-bold">{item.teams?.team_name ?? "-"}</p>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   {attempt.title ?? "-"}(報酬: {attempt.reward.toLocaleString()}円)
                 </p>
@@ -86,11 +87,11 @@ export function BonusMissionReviewQueue({ eventId, initialItems }: { eventId: st
                 </p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => review(attempt.id, "SUCCESS")} disabled={busyId === attempt.id} className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
-                  成功
+                <button onClick={() => review(attempt.id, "SUCCESS")} disabled={busyId === attempt.id} className={staffBtn.approve}>
+                  ✅ 成功
                 </button>
-                <button onClick={() => review(attempt.id, "FAILURE")} disabled={busyId === attempt.id} className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50">
-                  失敗
+                <button onClick={() => review(attempt.id, "FAILURE")} disabled={busyId === attempt.id} className={staffBtn.reject}>
+                  ❌ 失敗
                 </button>
               </div>
             </div>
@@ -98,7 +99,7 @@ export function BonusMissionReviewQueue({ eventId, initialItems }: { eventId: st
               {attempt.bonus_mission_photos.map((p) => (
                 <a key={p.id} href={photoUrls[p.storage_path] ?? "#"} target="_blank" rel="noreferrer">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photoUrls[p.storage_path] ?? ""} alt="ボーナスミッション証拠写真" className="h-24 w-24 rounded object-cover" />
+                  <img src={photoUrls[p.storage_path] ?? ""} alt="ボーナスミッション証拠写真" className="h-24 w-24 rounded-lg object-cover shadow" />
                 </a>
               ))}
             </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 function formatCountdown(ms: number): string {
   if (ms <= 0) return "まもなく開始";
@@ -14,6 +16,7 @@ function formatCountdown(ms: number): string {
 }
 
 export function ScheduledStartCountdown({ scheduledStartAt }: { scheduledStartAt: string | null }) {
+  const router = useRouter();
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
@@ -22,6 +25,18 @@ export function ScheduledStartCountdown({ scheduledStartAt }: { scheduledStartAt
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // 自動開始が予約されている場合、この待機画面自身がポーリングして開始時刻を過ぎたら
+  // 自動的にイベントを開始する(本部がボタンを押さなくても始まるようにするため)。
+  useEffect(() => {
+    const supabase = createClient();
+    const check = () => {
+      supabase.rpc("fn_maybe_auto_start_event").then(() => router.refresh());
+    };
+    check();
+    const interval = setInterval(check, 10000);
+    return () => clearInterval(interval);
+  }, [router]);
 
   if (!scheduledStartAt) {
     return <p className="mt-3 text-sm font-bold text-white/80">本部の開始をお待ちください</p>;

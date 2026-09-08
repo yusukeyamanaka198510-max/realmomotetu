@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { EVIDENCE_BUCKET } from "@/lib/game/storage";
+import { staffBtn } from "./StaffUI";
 
 type ReviewItem = {
   id: string;
@@ -86,37 +87,29 @@ export function ArrivalReviewQueue({
   }
 
   if (initialItems.length === 0) {
-    return <p className="mt-2 text-sm text-zinc-500">現在、確認待ちの到着報告はありません</p>;
+    return <p className="text-sm text-zinc-500">現在、確認待ちの到着報告はありません</p>;
   }
 
   return (
-    <ul className="mt-2 space-y-4">
+    <ul className="space-y-4">
       {initialItems.map((item) => {
         const arrival = item.arrival_submissions;
         if (!arrival) return null;
         return (
-          <li key={item.id} className="rounded border border-amber-300 bg-amber-50 p-4 dark:bg-amber-950">
-            <div className="flex items-center justify-between">
+          <li key={item.id} className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-950">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="font-medium">{item.teams?.team_name ?? "-"}</p>
+                <p className="text-lg font-bold">{item.teams?.team_name ?? "-"}</p>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   到着予定駅: {arrival.station?.name ?? "-"} / 提出: {new Date(arrival.submitted_at).toLocaleString("ja-JP")}
                 </p>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={() => review(arrival.id, "APPROVE")}
-                  disabled={busyId === arrival.id}
-                  className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-                >
-                  承認
+                <button onClick={() => review(arrival.id, "APPROVE")} disabled={busyId === arrival.id} className={staffBtn.approve}>
+                  ✅ 承認
                 </button>
-                <button
-                  onClick={() => review(arrival.id, "REJECT")}
-                  disabled={busyId === arrival.id}
-                  className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-                >
-                  却下
+                <button onClick={() => review(arrival.id, "REJECT")} disabled={busyId === arrival.id} className={staffBtn.reject}>
+                  ❌ 却下
                 </button>
               </div>
             </div>
@@ -127,7 +120,7 @@ export function ArrivalReviewQueue({
                   <img
                     src={photoUrls[p.storage_path] ?? ""}
                     alt="到着証拠写真"
-                    className="h-24 w-24 rounded object-cover"
+                    className="h-24 w-24 rounded-lg object-cover shadow"
                   />
                 </a>
               ))}

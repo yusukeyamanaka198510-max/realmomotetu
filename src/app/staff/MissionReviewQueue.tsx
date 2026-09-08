@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { EVIDENCE_BUCKET } from "@/lib/game/storage";
+import { staffBtn } from "./StaffUI";
 
 type ReviewItem = {
   id: string;
@@ -85,22 +86,22 @@ export function MissionReviewQueue({
   }
 
   if (initialItems.length === 0) {
-    return <p className="mt-2 text-sm text-zinc-500">現在、判定待ちのミッションはありません</p>;
+    return <p className="text-sm text-zinc-500">現在、判定待ちのミッションはありません</p>;
   }
 
   return (
-    <ul className="mt-2 space-y-4">
+    <ul className="space-y-4">
       {initialItems.map((item) => {
         const attempt = item.team_mission_attempts;
         if (!attempt) return null;
         return (
-          <li key={item.id} className="rounded border border-sky-300 bg-sky-50 p-4 dark:bg-sky-950">
-            <div className="flex items-center justify-between">
+          <li key={item.id} className="rounded-xl border-2 border-sky-300 bg-sky-50 p-4 dark:bg-sky-950">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="font-medium">
+                <p className="text-lg font-bold">
                   {item.teams?.team_name ?? "-"}
                   {attempt.attempt_number > 1 && (
-                    <span className="ml-2 text-xs text-zinc-500">{attempt.attempt_number}回目の挑戦</span>
+                    <span className="ml-2 text-xs font-normal text-zinc-500">{attempt.attempt_number}回目の挑戦</span>
                   )}
                 </p>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -108,19 +109,11 @@ export function MissionReviewQueue({
                 </p>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={() => review(attempt.id, "SUCCESS")}
-                  disabled={busyId === attempt.id}
-                  className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-                >
-                  成功
+                <button onClick={() => review(attempt.id, "SUCCESS")} disabled={busyId === attempt.id} className={staffBtn.approve}>
+                  ✅ 成功
                 </button>
-                <button
-                  onClick={() => review(attempt.id, "FAILURE")}
-                  disabled={busyId === attempt.id}
-                  className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-                >
-                  失敗
+                <button onClick={() => review(attempt.id, "FAILURE")} disabled={busyId === attempt.id} className={staffBtn.reject}>
+                  ❌ 失敗
                 </button>
               </div>
             </div>
@@ -131,7 +124,7 @@ export function MissionReviewQueue({
                   <img
                     src={photoUrls[p.storage_path] ?? ""}
                     alt="ミッション証拠写真"
-                    className="h-24 w-24 rounded object-cover"
+                    className="h-24 w-24 rounded-lg object-cover shadow"
                   />
                 </a>
               ))}

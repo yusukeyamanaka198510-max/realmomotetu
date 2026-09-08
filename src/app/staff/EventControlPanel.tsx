@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { staffBtn } from "./StaffUI";
 
 type EventInfo = {
   id: string;
@@ -16,6 +17,9 @@ type EventInfo = {
   dividend_interval_minutes: number;
   last_dividend_run_at: string | null;
   scheduled_start_at: string | null;
+  auto_start_enabled: boolean;
+  auto_start_time_limit_minutes: number | null;
+  auto_start_end_at: string | null;
 };
 
 // datetime-local入力用にローカルタイムゾーンの "YYYY-MM-DDTHH:mm" 形式へ変換
@@ -35,13 +39,14 @@ export function EventControlPanel({
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [minutes, setMinutes] = useState(event.time_limit_minutes ?? 240);
+  const [minutes, setMinutes] = useState(event.auto_start_time_limit_minutes ?? event.time_limit_minutes ?? 240);
   const [hideMinutes, setHideMinutes] = useState(event.leaderboard_hide_minutes_before_end);
-  const [endAtInput, setEndAtInput] = useState(toDatetimeLocalValue(event.end_at));
+  const [endAtInput, setEndAtInput] = useState(toDatetimeLocalValue(event.auto_start_end_at ?? event.end_at));
   const [nameDraft, setNameDraft] = useState(event.name);
   const [cooldownSeconds, setCooldownSeconds] = useState(event.obstruction_cooldown_seconds);
   const [dividendMinutes, setDividendMinutes] = useState(event.dividend_interval_minutes);
   const [scheduledStartInput, setScheduledStartInput] = useState(toDatetimeLocalValue(event.scheduled_start_at));
+  const [autoStartEnabled, setAutoStartEnabled] = useState(event.auto_start_enabled);
 
   useEffect(() => {
     const supabase = createClient();
@@ -51,8 +56,13 @@ export function EventControlPanel({
         router.refresh()
       )
       .subscribe();
+    // 参加者が誰もアクセスしていない間も自動開始が働くよう、本部画面側からもポーリングする。
+    const autoStartInterval = setInterval(() => {
+      supabase.rpc("fn_maybe_auto_start_event").then(() => router.refresh());
+    }, 10000);
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(autoStartInterval);
     };
   }, [event.id, router]);
 
@@ -123,10 +133,26 @@ export function EventControlPanel({
   }
 
   async function handleSaveScheduledStart() {
+    if (autoStartEnabled && !scheduledStartInput) {
+      window.alert("自動開始を有効にする場合は開始予定日時を入力してください");
+      return;
+    }
+    const useFixedEnd = !!endAtInput;
+    if (
+      autoStartEnabled &&
+      !window.confirm(
+        `${new Date(scheduledStartInput).toLocaleString("ja-JP")}に自動でイベントを開始します。よろしいですか?`
+      )
+    ) {
+      return;
+    }
     setBusy(true);
     const supabase = createClient();
-    const { error } = await supabase.rpc("fn_admin_set_scheduled_start_at", {
+    const { error } = await supabase.rpc("fn_admin_schedule_start", {
       p_scheduled_start_at: scheduledStartInput ? new Date(scheduledStartInput).toISOString() : null,
+      p_auto_start_enabled: autoStartEnabled,
+      p_time_limit_minutes: autoStartEnabled && !useFixedEnd ? minutes : null,
+      p_end_at: autoStartEnabled && useFixedEnd ? new Date(endAtInput).toISOString() : null,
     });
     setBusy(false);
     if (error) return window.alert(error.message);
@@ -145,7 +171,7 @@ export function EventControlPanel({
   const isEnded = event.status === "FORCE_ENDED" || event.status === "ENDED";
 
   return (
-    <div className="mt-4 rounded border border-zinc-200 p-4 dark:border-zinc-800">
+    <div>
       <div className="flex items-center gap-2 border-b border-zinc-200 pb-3 text-sm dark:border-zinc-800">
         <span className="text-zinc-500">イベント名(参加者画面には表示されない、社内管理用のラベル)</span>
         <input
@@ -154,7 +180,7 @@ export function EventControlPanel({
           onChange={(e) => setNameDraft(e.target.value)}
           className="flex-1 min-w-[140px] rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
         />
-        <button onClick={handleSaveName} disabled={busy || !nameDraft.trim()} className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700">
+        <button onClick={handleSaveName} disabled={busy || !nameDraft.trim()} className={staffBtn.neutral}>
           保存
         </button>
       </div>
@@ -177,14 +203,13 @@ export function EventControlPanel({
               onChange={(e) => setScheduledStartInput(e.target.value)}
               className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800"
             />
-            <button
-              onClick={handleSaveScheduledStart}
-              disabled={busy}
-              className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700"
-            >
-              保存
-            </button>
-            <span className="w-full text-xs text-zinc-500">終了日時指定</span>
+            <label className="flex items-center gap-1 text-sm">
+              <input type="checkbox" checked={autoStartEnabled} onChange={(e) => setAutoStartEnabled(e.target.checked)} />
+              予定日時に自動でイベント開始する
+            </label>
+            <span className="w-full text-xs text-zinc-500">
+              終了日時指定{autoStartEnabled ? "(自動開始時にも使用)" : ""}
+            </span>
             <input
               type="datetime-local"
               value={endAtInput}
@@ -200,22 +225,17 @@ export function EventControlPanel({
               className="w-20 rounded border border-zinc-300 px-2 py-1 text-sm disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800"
             />
             <span className="text-sm">分後に終了</span>
-            <button
-              onClick={handleStart}
-              disabled={busy}
-              className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-            >
-              イベント開始
+            <button onClick={handleSaveScheduledStart} disabled={busy} className={staffBtn.neutral}>
+              予約を保存
+            </button>
+            <button onClick={handleStart} disabled={busy} className={staffBtn.approve}>
+              🚀 今すぐイベント開始
             </button>
           </div>
         )}
         {event.status === "RUNNING" && (
-          <button
-            onClick={handleForceEnd}
-            disabled={busy}
-            className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-          >
-            強制終了
+          <button onClick={handleForceEnd} disabled={busy} className={staffBtn.danger}>
+            🛑 強制終了
           </button>
         )}
       </div>
@@ -230,11 +250,7 @@ export function EventControlPanel({
           className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
         />
         <span>分前からランキング・ゴール表示を参加者から非表示にする(0=常に表示)</span>
-        <button
-          onClick={handleSaveHideMinutes}
-          disabled={busy}
-          className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700"
-        >
+        <button onClick={handleSaveHideMinutes} disabled={busy} className={staffBtn.neutral}>
           保存
         </button>
       </div>
@@ -249,11 +265,7 @@ export function EventControlPanel({
           className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
         />
         <span>秒(同一チームから同じ相手への妨害カード連続使用を防ぐ。0=無効)</span>
-        <button
-          onClick={handleSaveCooldown}
-          disabled={busy}
-          className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700"
-        >
+        <button onClick={handleSaveCooldown} disabled={busy} className={staffBtn.neutral}>
           保存
         </button>
       </div>
@@ -268,19 +280,11 @@ export function EventControlPanel({
           className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
         />
         <span>分ごと(0=自動実行を停止)</span>
-        <button
-          onClick={handleSaveDividendInterval}
-          disabled={busy}
-          className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700"
-        >
+        <button onClick={handleSaveDividendInterval} disabled={busy} className={staffBtn.neutral}>
           保存
         </button>
-        <button
-          onClick={handleRunDividendNow}
-          disabled={busy}
-          className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
-        >
-          📈今すぐ配当を実行
+        <button onClick={handleRunDividendNow} disabled={busy} className={staffBtn.primary}>
+          📈 今すぐ配当を実行
         </button>
         {event.last_dividend_run_at && (
           <span className="w-full text-xs text-zinc-500">
