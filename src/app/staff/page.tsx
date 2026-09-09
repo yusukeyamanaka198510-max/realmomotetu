@@ -12,6 +12,7 @@ import { AdminActionLogPanel } from "./AdminActionLogPanel";
 import { LeaderboardSnapshotPanel } from "./LeaderboardSnapshotPanel";
 import { PasswordChangePanel } from "@/components/PasswordChangePanel";
 import { StaffSection } from "./StaffUI";
+import { CardEnabledPanel } from "./CardEnabledPanel";
 
 export default async function StaffPage() {
   const actor = await getActor();
@@ -113,7 +114,7 @@ export default async function StaffPage() {
     team_bonus_mission_attempts: bonusMissionAttemptRows?.find((a) => a.id === r.ref_id) ?? null,
   }));
 
-  const { data: allCards } = await supabase.from("cards").select("id, card_code, name, category, rarity").order("category").order("rarity");
+  const { data: allCards } = await supabase.from("cards").select("id, card_code, name, category, rarity, enabled").order("category").order("rarity");
   const { data: allTeamCards } = await supabase
     .from("team_cards")
     .select("team_id, quantity, card:card_id(card_code, name)")
@@ -276,6 +277,10 @@ export default async function StaffPage() {
 
       <StaffSection icon="🛠️" title="チーム個別操作" accent="zinc">
         <TeamAdminPanel teams={teamRows} stations={stations ?? []} allCards={allCards ?? []} />
+      </StaffSection>
+
+      <StaffSection icon="🎴" title="採用カード選択" accent="zinc">
+        <CardEnabledPanel cards={allCards ?? []} />
       </StaffSection>
 
       <StaffSection icon="⚙️" title="イベント制御(開始/終了/各種設定)" accent="zinc">

@@ -52,3 +52,6 @@ desktop.ini
 # logs / temp output from dev scripts
 *.log
 *_out.txt
+
+.vercel
+.env*
