@@ -172,14 +172,16 @@ export function EventControlPanel({
 
   return (
     <div>
-      <div className="flex items-center gap-2 border-b border-zinc-200 pb-3 text-sm dark:border-zinc-800">
-        <span className="text-zinc-500">イベント名(参加者画面には表示されない、社内管理用のラベル)</span>
-        <input
-          type="text"
-          value={nameDraft}
-          onChange={(e) => setNameDraft(e.target.value)}
-          className="flex-1 min-w-[140px] rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
-        />
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 pb-3 text-sm dark:border-zinc-800">
+        <div className="flex flex-1 items-center gap-2">
+          <span className="shrink-0 text-zinc-500">イベント名(参加者画面には表示されない、社内管理用のラベル)</span>
+          <input
+            type="text"
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            className="min-w-[140px] flex-1 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+          />
+        </div>
         <button onClick={handleSaveName} disabled={busy || !nameDraft.trim()} className={staffBtn.neutral}>
           保存
         </button>
@@ -232,10 +234,12 @@ export function EventControlPanel({
             <p className="text-xs text-zinc-400">
               開始予定日時は参加者画面への案内表示に使われます。終了日時は自動開始する場合にも使われます。
             </p>
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex justify-end pt-1">
               <button onClick={handleSaveScheduledStart} disabled={busy} className={staffBtn.neutral}>
                 予約を保存
               </button>
+            </div>
+            <div className="flex justify-end">
               <button onClick={handleStart} disabled={busy} className={staffBtn.approve}>
                 🚀 今すぐイベント開始
               </button>
@@ -251,57 +255,67 @@ export function EventControlPanel({
         )}
       </div>
 
-      <div className="mt-3 flex items-center gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
-        <span>終了</span>
-        <input
-          type="number"
-          min={0}
-          value={hideMinutes}
-          onChange={(e) => setHideMinutes(Number(e.target.value))}
-          className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
-        />
-        <span>分前からランキング・ゴール表示を参加者から非表示にする(0=常に表示)</span>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
+        <div className="flex flex-wrap items-center gap-2">
+          <span>終了</span>
+          <input
+            type="number"
+            min={0}
+            value={hideMinutes}
+            onChange={(e) => setHideMinutes(Number(e.target.value))}
+            className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+          />
+          <span>分前からランキング・ゴール表示を参加者から非表示にする(0=常に表示)</span>
+        </div>
         <button onClick={handleSaveHideMinutes} disabled={busy} className={staffBtn.neutral}>
           保存
         </button>
       </div>
 
-      <div className="mt-3 flex items-center gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
-        <span>妨害カードのクールタイム</span>
-        <input
-          type="number"
-          min={0}
-          value={cooldownSeconds}
-          onChange={(e) => setCooldownSeconds(Number(e.target.value))}
-          className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
-        />
-        <span>秒(同一チームから同じ相手への妨害カード連続使用を防ぐ。0=無効)</span>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
+        <div className="flex flex-wrap items-center gap-2">
+          <span>妨害カードのクールタイム</span>
+          <input
+            type="number"
+            min={0}
+            value={cooldownSeconds}
+            onChange={(e) => setCooldownSeconds(Number(e.target.value))}
+            className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+          />
+          <span>秒(同一チームから同じ相手への妨害カード連続使用を防ぐ。0=無効)</span>
+        </div>
         <button onClick={handleSaveCooldown} disabled={busy} className={staffBtn.neutral}>
           保存
         </button>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
-        <span>不動産の定期配当間隔</span>
-        <input
-          type="number"
-          min={0}
-          value={dividendMinutes}
-          onChange={(e) => setDividendMinutes(Number(e.target.value))}
-          className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
-        />
-        <span>分ごと(0=自動実行を停止)</span>
-        <button onClick={handleSaveDividendInterval} disabled={busy} className={staffBtn.neutral}>
-          保存
-        </button>
-        <button onClick={handleRunDividendNow} disabled={busy} className={staffBtn.primary}>
-          📈 今すぐ配当を実行
-        </button>
-        {event.last_dividend_run_at && (
-          <span className="w-full text-xs text-zinc-500">
-            前回実行: {new Date(event.last_dividend_run_at).toLocaleString("ja-JP")}
+      <div className="mt-3 space-y-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span>不動産の定期配当間隔</span>
+            <input
+              type="number"
+              min={0}
+              value={dividendMinutes}
+              onChange={(e) => setDividendMinutes(Number(e.target.value))}
+              className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+            />
+            <span>分ごと(0=自動実行を停止)</span>
+          </div>
+          <button onClick={handleSaveDividendInterval} disabled={busy} className={staffBtn.neutral}>
+            保存
+          </button>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-zinc-500">
+            {event.last_dividend_run_at
+              ? `前回実行: ${new Date(event.last_dividend_run_at).toLocaleString("ja-JP")}`
+              : ""}
           </span>
-        )}
+          <button onClick={handleRunDividendNow} disabled={busy} className={staffBtn.primary}>
+            📈 今すぐ配当を実行
+          </button>
+        </div>
       </div>
 
       {isEnded && topTeams.length === 1 && (
