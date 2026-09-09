@@ -27,7 +27,7 @@ export function StaffSection({
   icon: string;
   title: string;
   count?: number;
-  accent?: "amber" | "sky" | "fuchsia" | "emerald" | "zinc" | "indigo";
+  accent?: "amber" | "sky" | "fuchsia" | "emerald" | "zinc" | "indigo" | "red";
   children: ReactNode;
 }) {
   const accentBorder: Record<string, string> = {
@@ -37,6 +37,7 @@ export function StaffSection({
     emerald: "border-emerald-300 dark:border-emerald-800",
     indigo: "border-indigo-300 dark:border-indigo-800",
     zinc: "border-zinc-200 dark:border-zinc-800",
+    red: "border-red-300 dark:border-red-800",
   };
   return (
     <section className={`mt-6 rounded-2xl border-2 bg-white p-4 shadow-sm dark:bg-zinc-900 ${accentBorder[accent]}`}>

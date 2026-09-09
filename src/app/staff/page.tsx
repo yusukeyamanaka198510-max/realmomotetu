@@ -13,6 +13,7 @@ import { LeaderboardSnapshotPanel } from "./LeaderboardSnapshotPanel";
 import { PasswordChangePanel } from "@/components/PasswordChangePanel";
 import { StaffSection } from "./StaffUI";
 import { CardEnabledPanel } from "./CardEnabledPanel";
+import { RehearsalResetPanel } from "./RehearsalResetPanel";
 
 export default async function StaffPage() {
   const actor = await getActor();
@@ -281,6 +282,10 @@ export default async function StaffPage() {
 
       <StaffSection icon="🎴" title="採用カード選択" accent="zinc">
         <CardEnabledPanel cards={allCards ?? []} />
+      </StaffSection>
+
+      <StaffSection icon="🔄" title="リハーサルリセット" accent="red">
+        <RehearsalResetPanel />
       </StaffSection>
 
       <StaffSection icon="⚙️" title="イベント制御(開始/終了/各種設定)" accent="zinc">
