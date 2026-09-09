@@ -213,12 +213,22 @@ export default async function TeamPage() {
     })
     .filter((c): c is OwnedCard => !!c);
 
-  const { data: otherTeamsRaw } = await supabase
-    .from("teams")
-    .select("id, team_name, team_number")
-    .eq("event_id", actor.eventId)
-    .neq("id", actor.teamId)
-    .order("team_number");
+  const { data: otherTeamsStatusRaw } = await supabase.rpc("fn_get_other_teams_status");
+  const otherTeamsRaw = (
+    (otherTeamsStatusRaw ?? []) as {
+      team_id: string;
+      team_number: number;
+      team_name: string;
+      coin_balance_cache: number;
+      station_name: string | null;
+    }[]
+  ).map((t) => ({
+    id: t.team_id,
+    team_name: t.team_name,
+    team_number: t.team_number,
+    coin_balance_cache: t.coin_balance_cache,
+    station_name: t.station_name,
+  }));
 
   const { data: exchangeableCardsRaw } = await supabase
     .from("cards")
@@ -251,9 +261,17 @@ export default async function TeamPage() {
 
   const { data: activeEffects } = await supabase
     .from("card_active_effects")
-    .select("id, effect_type")
+    .select("id, effect_type, payload")
     .eq("team_id", actor.teamId)
     .is("consumed_at", null);
+
+  // 絶好調カード等、「通常サイコロ1個のリクエストをサーバー側で複数個に引き上げる」効果が
+  // 有効な間は、演出開始時点でその個数を知っておかないと(振っている最中は1個表示のまま、
+  // 着地の瞬間だけ複数個に変わって見える不具合になるため)クライアント側にも渡しておく。
+  const hotStreakEffect = (activeEffects ?? []).find((e) => e.effect_type === "HOT_STREAK");
+  const hotStreakDiceCount = hotStreakEffect
+    ? Number((hotStreakEffect.payload as { dice_count?: number } | null)?.dice_count ?? 2)
+    : null;
 
 
   // eslint-disable-next-line react-hooks/purity -- Server Componentがリクエスト時点のサーバー時刻で判定するのは意図通り
@@ -299,7 +317,11 @@ export default async function TeamPage() {
       <DividendAnnouncementOverlay notifications={notifications ?? []} />
       <BombiiCurseOverlay notifications={notifications ?? []} myTeamName={actor.teamName} />
 
-      <DiceCardProvider initialState={(state?.state ?? "WAITING") as TeamGameState} diceResult={diceResult}>
+      <DiceCardProvider
+        initialState={(state?.state ?? "WAITING") as TeamGameState}
+        diceResult={diceResult}
+        hotStreakDiceCount={hotStreakDiceCount}
+      >
         <TeamGameFlow
           teamId={actor.teamId}
           eventId={actor.eventId}

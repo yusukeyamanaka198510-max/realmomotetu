@@ -28,13 +28,31 @@ export type OwnedCard = {
   target_type: CardTargetType;
 };
 
-export type OtherTeam = { id: string; team_name: string; team_number: number };
+export type OtherTeam = {
+  id: string;
+  team_name: string;
+  team_number: number;
+  coin_balance_cache: number;
+  station_name: string | null;
+};
 export type TakeoverTarget = { purchase_id: string; team_id: string; team_name: string; property_name: string; price_paid: number };
 export type ExchangeableCard = { card_code: string; name: string; rarity: CardRarity };
 export type CardNotification = { id: string; message: string; created_at: string };
 export type OwnProperty = { id: string; name: string; price: number };
 
 const CATEGORY_ORDER: CardCategory[] = ["MOVEMENT", "OBSTRUCTION", "DEFENSE", "MISSION", "PROPERTY", "SPECIAL"];
+
+// サーバー(Postgres例外)から返る生の英語メッセージのうち、参加者に見せる主要なものだけ日本語化する。
+// 該当しないものはそのまま表示する(想定外のエラーを握りつぶさないため)。
+function translateCardError(message: string): string {
+  if (message.includes("only one card can be used per turn")) return "このターンは既にカードを1枚使用済みです。次のターンまでお待ちください。";
+  if (message.includes("card use disabled this turn")) return "冬眠カードの効果で、このターンはカードを使用できません。";
+  if (message.includes("this card can only be used while cursed by bombii")) return "このカードはボンビーが取り憑いている時のみ使用できます。";
+  if (message.includes("card not owned")) return "このカードは所持していません。";
+  if (message.startsWith("invalid state:")) return "今の状態ではこのカードを使用できません。";
+  if (message.includes("cooldown:")) return "対象チームへの妨害はクールタイム中です。少し待ってから使用してください。";
+  return message;
+}
 
 // このカードは今のstateでないと使えない、という簡易ヒント(サーバー側の判定が最終的な正)
 function isLikelyUsable(card: OwnedCard, state: TeamGameState): { ok: boolean; reason?: string } {
@@ -47,6 +65,7 @@ function isLikelyUsable(card: OwnedCard, state: TeamGameState): { ok: boolean; r
     case "MOVEMENT_TELEPORT_TO_TEAM":
     case "MOVEMENT_TO_OWNED_PROPERTY":
     case "SWAP_LOCATION":
+    case "MOVEMENT_CHOSEN_DIE":
       if (state !== "DICE_READY") return { ok: false, reason: "サイコロを振れる状態ではありません" };
       return { ok: true };
     case "MISSION_REWARD_MULTIPLIER":
@@ -134,10 +153,11 @@ export function CardPanel({
     return map;
   }, [cards]);
 
-  function needsPayload(card: OwnedCard): "property" | "voucher" | "takeover" | null {
+  function needsPayload(card: OwnedCard): "property" | "voucher" | "takeover" | "dice_choice" | null {
     if (card.effect_type === "PROPERTY_HALF_PRICE") return "property";
     if (card.effect_type === "VOUCHER_EXCHANGE") return "voucher";
     if (card.effect_type === "PROPERTY_TAKEOVER") return "takeover";
+    if (card.effect_type === "MOVEMENT_CHOSEN_DIE") return "dice_choice";
     return null;
   }
 
@@ -157,7 +177,7 @@ export function CardPanel({
     });
     setBusy(false);
     if (error) {
-      setError(error.message);
+      setError(translateCardError(error.message));
       setUsingCard(null);
       setUsePhase(null);
       return;
@@ -184,7 +204,7 @@ export function CardPanel({
     const { error, message } = await rollCardDice(card.card_code, diceCount);
     setBusy(false);
     if (error) {
-      setError(error);
+      setError(translateCardError(error));
       return;
     }
     setPendingDiceMessage(message ?? `${card.name}を使用しました。`);
@@ -227,6 +247,9 @@ export function CardPanel({
       if (!t) return setError("対象が見つかりません");
       payload = { purchase_id: payloadValue };
       target = t.team_id;
+    } else if (payloadKind === "dice_choice") {
+      if (!payloadValue) return setError("出目を選択してください");
+      payload = { chosen_value: Number(payloadValue) };
     }
     void executeUse(pendingCard, target, payload);
   }
@@ -353,7 +376,21 @@ export function CardPanel({
               <option value="">対象チームを選択</option>
               {otherTeams.map((t) => (
                 <option key={t.id} value={t.id}>
-                  TEAM {t.team_number} {t.team_name}
+                  TEAM {t.team_number} {t.team_name}({t.station_name ?? "-"} / {formatYen(t.coin_balance_cache)})
+                </option>
+              ))}
+            </select>
+          )}
+          {needsPayload(pendingCard) === "dice_choice" && (
+            <select
+              value={payloadValue}
+              onChange={(e) => setPayloadValue(e.target.value)}
+              className="mt-2 w-full rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+            >
+              <option value="">出目を選択(1〜6)</option>
+              {[1, 2, 3, 4, 5, 6].map((n) => (
+                <option key={n} value={n}>
+                  {n}
                 </option>
               ))}
             </select>

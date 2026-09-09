@@ -27,10 +27,15 @@ const DiceCardContext = createContext<DiceCardValue | null>(null);
 export function DiceCardProvider({
   initialState,
   diceResult,
+  hotStreakDiceCount,
   children,
 }: {
   initialState: TeamGameState;
   diceResult: DiceResult | null;
+  // 絶好調カード等が有効な間、通常の「サイコロを振る」(1個リクエスト)もサーバー側で
+  // この個数に引き上げられる。振り始めた瞬間からその個数で演出しないと、着地の瞬間だけ
+  // 個数が変わって見える不具合になるため、あらかじめ渡しておく。
+  hotStreakDiceCount: number | null;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -56,7 +61,7 @@ export function DiceCardProvider({
 
   async function rollPlainDice(): Promise<{ error?: string }> {
     setCanStopDice(false);
-    setRollingDiceCount(1);
+    setRollingDiceCount(hotStreakDiceCount ?? 1);
     setDicePhase("rolling");
     const supabase = createClient();
     const { error } = await supabase.rpc("fn_roll_dice", { p_dice_count: 1 });

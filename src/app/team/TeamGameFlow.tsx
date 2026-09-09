@@ -504,6 +504,9 @@ export function TeamGameFlow({
           <p className="text-sm">
             次の目的駅: <span className="font-semibold">{nextStationName ?? "-"}</span>
           </p>
+          <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+            👉 {nextStationName ?? "この駅"}に到着したら、下のボタンをタップしよう！
+          </p>
           <GameButton onClick={handleStartArrival} disabled={busy} variant="destination" className="w-full">
             🏁 {nextStationName ?? "この駅"}に到着しました
           </GameButton>
