@@ -64,6 +64,9 @@ export function MissionReviewQueue({
      
   }, [initialItems]);
 
+  const [items, setItems] = useState(initialItems);
+  useEffect(() => setItems(initialItems), [initialItems]);
+
   async function review(attemptId: string, decision: "SUCCESS" | "FAILURE") {
     let reason: string | null = null;
     if (decision === "FAILURE") {
@@ -82,47 +85,37 @@ export function MissionReviewQueue({
       window.alert(error.message);
       return;
     }
+    // サーバーの再取得(router.refresh)を待たず、その場で消して即座に反応させる。
+    setItems((prev) => prev.filter((it) => it.team_mission_attempts?.id !== attemptId));
     router.refresh();
   }
 
-  if (initialItems.length === 0) {
+  if (items.length === 0) {
     return <p className="text-sm text-zinc-500">現在、判定待ちのミッションはありません</p>;
   }
 
   return (
-    <ul className="space-y-4">
-      {initialItems.map((item) => {
+    <ul className="space-y-3">
+      {items.map((item) => {
         const attempt = item.team_mission_attempts;
         if (!attempt) return null;
         return (
-          <li key={item.id} className="rounded-xl border-2 border-sky-300 bg-sky-50 p-4 dark:bg-sky-950">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-lg font-bold">
-                  {item.teams?.team_name ?? "-"}
-                  {attempt.attempt_number > 1 && (
-                    <span className="ml-2 text-xs font-normal text-zinc-500">{attempt.attempt_number}回目の挑戦</span>
-                  )}
-                </p>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  <span className="font-semibold">{attempt.mission?.title ?? "-"}</span>
-                  {attempt.mission?.description && (
-                    <span className="ml-2 whitespace-pre-line text-zinc-500 dark:text-zinc-500">
-                      {attempt.mission.description}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => review(attempt.id, "SUCCESS")} disabled={busyId === attempt.id} className={staffBtn.approve}>
-                  ✅ 成功
-                </button>
-                <button onClick={() => review(attempt.id, "FAILURE")} disabled={busyId === attempt.id} className={staffBtn.reject}>
-                  ❌ 失敗
-                </button>
-              </div>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
+          <li key={item.id} className="rounded-xl border-2 border-sky-300 bg-sky-50 p-3 dark:bg-sky-950">
+            <p className="text-base font-bold">
+              {item.teams?.team_name ?? "-"}
+              {attempt.attempt_number > 1 && (
+                <span className="ml-2 text-xs font-normal text-zinc-500">{attempt.attempt_number}回目の挑戦</span>
+              )}
+            </p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <span className="font-semibold">{attempt.mission?.title ?? "-"}</span>
+              {attempt.mission?.description && (
+                <span className="ml-2 whitespace-pre-line text-zinc-500 dark:text-zinc-500">
+                  {attempt.mission.description}
+                </span>
+              )}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               {attempt.mission_photos.map((p, i) => (
                 <a
                   key={p.id}
@@ -134,6 +127,12 @@ export function MissionReviewQueue({
                   📎 ミッション証拠写真{attempt.mission_photos.length > 1 ? i + 1 : ""}を開く
                 </a>
               ))}
+              <button onClick={() => review(attempt.id, "SUCCESS")} disabled={busyId === attempt.id} className={staffBtn.approve}>
+                ✅ 成功
+              </button>
+              <button onClick={() => review(attempt.id, "FAILURE")} disabled={busyId === attempt.id} className={staffBtn.reject}>
+                ❌ 失敗
+              </button>
             </div>
           </li>
         );

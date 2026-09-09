@@ -65,6 +65,9 @@ export function ArrivalReviewQueue({
      
   }, [initialItems]);
 
+  const [items, setItems] = useState(initialItems);
+  useEffect(() => setItems(initialItems), [initialItems]);
+
   async function review(arrivalSubmissionId: string, decision: "APPROVE" | "REJECT") {
     let reason: string | null = null;
     if (decision === "REJECT") {
@@ -83,37 +86,27 @@ export function ArrivalReviewQueue({
       window.alert(error.message);
       return;
     }
+    // サーバーの再取得(router.refresh)を待たず、その場で消して即座に反応させる。
+    setItems((prev) => prev.filter((it) => it.arrival_submissions?.id !== arrivalSubmissionId));
     router.refresh();
   }
 
-  if (initialItems.length === 0) {
+  if (items.length === 0) {
     return <p className="text-sm text-zinc-500">現在、確認待ちの到着報告はありません</p>;
   }
 
   return (
-    <ul className="space-y-4">
-      {initialItems.map((item) => {
+    <ul className="space-y-3">
+      {items.map((item) => {
         const arrival = item.arrival_submissions;
         if (!arrival) return null;
         return (
-          <li key={item.id} className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:bg-amber-950">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-lg font-bold">{item.teams?.team_name ?? "-"}</p>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  到着予定駅: {arrival.station?.name ?? "-"} / 提出: {new Date(arrival.submitted_at).toLocaleString("ja-JP")}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => review(arrival.id, "APPROVE")} disabled={busyId === arrival.id} className={staffBtn.approve}>
-                  ✅ 承認
-                </button>
-                <button onClick={() => review(arrival.id, "REJECT")} disabled={busyId === arrival.id} className={staffBtn.reject}>
-                  ❌ 却下
-                </button>
-              </div>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
+          <li key={item.id} className="rounded-xl border-2 border-amber-300 bg-amber-50 p-3 dark:bg-amber-950">
+            <p className="text-base font-bold">{item.teams?.team_name ?? "-"}</p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              到着予定駅: {arrival.station?.name ?? "-"} / 提出: {new Date(arrival.submitted_at).toLocaleString("ja-JP")}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               {arrival.arrival_photos.map((p, i) => (
                 <a
                   key={p.id}
@@ -125,6 +118,12 @@ export function ArrivalReviewQueue({
                   📎 到着証拠写真{arrival.arrival_photos.length > 1 ? i + 1 : ""}を開く
                 </a>
               ))}
+              <button onClick={() => review(arrival.id, "APPROVE")} disabled={busyId === arrival.id} className={staffBtn.approve}>
+                ✅ 承認
+              </button>
+              <button onClick={() => review(arrival.id, "REJECT")} disabled={busyId === arrival.id} className={staffBtn.reject}>
+                ❌ 却下
+              </button>
             </div>
           </li>
         );
