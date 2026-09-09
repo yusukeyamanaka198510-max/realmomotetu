@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { GameBadge, GamePanel } from "@/components/game-ui";
 import { CARD_RARITY_LABELS, type CardRarity } from "@/lib/game/types";
 import { formatYen } from "@/lib/game/format";
+import { PasswordChangePanel } from "@/components/PasswordChangePanel";
+import { TeamNameChangePanel } from "../TeamNameChangePanel";
 
 export default async function MyPage() {
   const actor = await getActor();
@@ -88,6 +90,11 @@ export default async function MyPage() {
           })}
         </ul>
       </GamePanel>
+
+      <div className="space-y-3">
+        <PasswordChangePanel />
+        <TeamNameChangePanel currentName={actor.teamName} currentRepresentativeName={actor.representativeName} />
+      </div>
     </div>
   );
 }

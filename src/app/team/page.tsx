@@ -8,8 +8,6 @@ import { Leaderboard } from "./Leaderboard";
 import { CardPanel, type OwnedCard } from "./CardPanel";
 import { BonusMissionPanel } from "./BonusMissionPanel";
 import { MISSION_DEFAULT_REWARD, type MissionDifficulty, type TeamGameState } from "@/lib/game/types";
-import { PasswordChangePanel } from "@/components/PasswordChangePanel";
-import { TeamNameChangePanel } from "./TeamNameChangePanel";
 import { CountdownTimer } from "@/components/CountdownTimer";
 import { StatusHeader } from "./StatusHeader";
 import { CardSlotOverlay } from "./CardSlotOverlay";
@@ -358,10 +356,6 @@ export default async function TeamPage() {
         <Leaderboard eventId={actor.eventId} />
       </div>
 
-          <div className="mt-6 space-y-3">
-            <PasswordChangePanel />
-            <TeamNameChangePanel currentName={actor.teamName} currentRepresentativeName={actor.representativeName} />
-          </div>
         </div>
       </div>
     </div>

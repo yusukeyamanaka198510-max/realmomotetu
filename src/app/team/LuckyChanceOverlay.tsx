@@ -49,9 +49,15 @@ export function LuckyChanceOverlay({ notifications }: { notifications: LuckyNoti
       <div className={`relative max-w-md text-center ${stage === "in" ? "anim-slam" : ""}`}>
         <p className="text-4xl">🍀</p>
         <p className="game-text-event mt-1 text-4xl">ラッキーボーナス!</p>
-        <p className="mt-4 text-2xl leading-snug font-black text-white [text-shadow:0_2px_0_rgba(0,0,0,0.4)]">
-          {active.copy}
-        </p>
+        <div className="mt-4 space-y-1 text-2xl leading-snug font-black text-white [text-shadow:0_2px_0_rgba(0,0,0,0.4)]">
+          {active.copy
+            .split(/[!!]/)
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line, i) => (
+              <p key={i}>{line}!</p>
+            ))}
+        </div>
         <p className="mt-4 text-3xl font-black text-game-gold [text-shadow:0_2px_0_rgba(0,0,0,0.4)]">
           +{formatYen(active.amount)}
         </p>
