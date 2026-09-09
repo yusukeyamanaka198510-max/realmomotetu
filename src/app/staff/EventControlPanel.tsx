@@ -172,17 +172,15 @@ export function EventControlPanel({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 pb-3 text-sm dark:border-zinc-800">
-        <div className="flex flex-1 items-center gap-2">
-          <span className="shrink-0 text-zinc-500">イベント名(参加者画面には表示されない、社内管理用のラベル)</span>
-          <input
-            type="text"
-            value={nameDraft}
-            onChange={(e) => setNameDraft(e.target.value)}
-            className="min-w-[140px] flex-1 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
-          />
-        </div>
-        <button onClick={handleSaveName} disabled={busy || !nameDraft.trim()} className={staffBtn.neutral}>
+      <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200 pb-3 text-sm dark:border-zinc-800">
+        <span className="shrink-0 text-zinc-500">イベント名(参加者画面には表示されない、社内管理用のラベル)</span>
+        <input
+          type="text"
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.target.value)}
+          className="min-w-[140px] flex-1 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+        />
+        <button onClick={handleSaveName} disabled={busy || !nameDraft.trim()} className={`ml-auto ${staffBtn.neutral}`}>
           保存
         </button>
       </div>
@@ -255,54 +253,48 @@ export function EventControlPanel({
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
-        <div className="flex flex-wrap items-center gap-2">
-          <span>終了</span>
-          <input
-            type="number"
-            min={0}
-            value={hideMinutes}
-            onChange={(e) => setHideMinutes(Number(e.target.value))}
-            className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
-          />
-          <span>分前からランキング・ゴール表示を参加者から非表示にする(0=常に表示)</span>
-        </div>
-        <button onClick={handleSaveHideMinutes} disabled={busy} className={staffBtn.neutral}>
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
+        <span>終了</span>
+        <input
+          type="number"
+          min={0}
+          value={hideMinutes}
+          onChange={(e) => setHideMinutes(Number(e.target.value))}
+          className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+        />
+        <span>分前からランキング・ゴール表示を参加者から非表示にする(0=常に表示)</span>
+        <button onClick={handleSaveHideMinutes} disabled={busy} className={`ml-auto ${staffBtn.neutral}`}>
           保存
         </button>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
-        <div className="flex flex-wrap items-center gap-2">
-          <span>妨害カードのクールタイム</span>
-          <input
-            type="number"
-            min={0}
-            value={cooldownSeconds}
-            onChange={(e) => setCooldownSeconds(Number(e.target.value))}
-            className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
-          />
-          <span>秒(同一チームから同じ相手への妨害カード連続使用を防ぐ。0=無効)</span>
-        </div>
-        <button onClick={handleSaveCooldown} disabled={busy} className={staffBtn.neutral}>
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
+        <span>妨害カードのクールタイム</span>
+        <input
+          type="number"
+          min={0}
+          value={cooldownSeconds}
+          onChange={(e) => setCooldownSeconds(Number(e.target.value))}
+          className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+        />
+        <span>秒(同一チームから同じ相手への妨害カード連続使用を防ぐ。0=無効)</span>
+        <button onClick={handleSaveCooldown} disabled={busy} className={`ml-auto ${staffBtn.neutral}`}>
           保存
         </button>
       </div>
 
       <div className="mt-3 space-y-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span>不動産の定期配当間隔</span>
-            <input
-              type="number"
-              min={0}
-              value={dividendMinutes}
-              onChange={(e) => setDividendMinutes(Number(e.target.value))}
-              className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
-            />
-            <span>分ごと(0=自動実行を停止)</span>
-          </div>
-          <button onClick={handleSaveDividendInterval} disabled={busy} className={staffBtn.neutral}>
+        <div className="flex flex-wrap items-center gap-2">
+          <span>不動産の定期配当間隔</span>
+          <input
+            type="number"
+            min={0}
+            value={dividendMinutes}
+            onChange={(e) => setDividendMinutes(Number(e.target.value))}
+            className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+          />
+          <span>分ごと(0=自動実行を停止)</span>
+          <button onClick={handleSaveDividendInterval} disabled={busy} className={`ml-auto ${staffBtn.neutral}`}>
             保存
           </button>
         </div>
