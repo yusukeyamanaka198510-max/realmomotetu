@@ -185,58 +185,69 @@ export function EventControlPanel({
         </button>
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
-        <div>
-          <p className="text-sm">
-            ステータス: <span className="font-semibold">{event.status}</span>
-          </p>
-          {event.end_at && (
-            <p className="text-xs text-zinc-500">終了予定: {new Date(event.end_at).toLocaleString("ja-JP")}</p>
-          )}
-        </div>
+      <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+        <p className="text-sm">
+          ステータス: <span className="font-semibold">{event.status}</span>
+        </p>
+        {event.end_at && (
+          <p className="mt-0.5 text-xs text-zinc-500">終了予定: {new Date(event.end_at).toLocaleString("ja-JP")}</p>
+        )}
+
         {event.status === "SCHEDULED" && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-zinc-500">開始予定日時(参加者画面に案内表示)</span>
-            <input
-              type="datetime-local"
-              value={scheduledStartInput}
-              onChange={(e) => setScheduledStartInput(e.target.value)}
-              className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800"
-            />
-            <label className="flex items-center gap-1 text-sm">
-              <input type="checkbox" checked={autoStartEnabled} onChange={(e) => setAutoStartEnabled(e.target.checked)} />
-              予定日時に自動でイベント開始する
-            </label>
-            <span className="w-full text-xs text-zinc-500">
-              終了日時指定{autoStartEnabled ? "(自動開始時にも使用)" : ""}
-            </span>
-            <input
-              type="datetime-local"
-              value={endAtInput}
-              onChange={(e) => setEndAtInput(e.target.value)}
-              className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800"
-            />
-            <span className="text-xs text-zinc-400">または</span>
-            <input
-              type="number"
-              value={minutes}
-              onChange={(e) => setMinutes(Number(e.target.value))}
-              disabled={!!endAtInput}
-              className="w-20 rounded border border-zinc-300 px-2 py-1 text-sm disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800"
-            />
-            <span className="text-sm">分後に終了</span>
-            <button onClick={handleSaveScheduledStart} disabled={busy} className={staffBtn.neutral}>
-              予約を保存
-            </button>
-            <button onClick={handleStart} disabled={busy} className={staffBtn.approve}>
-              🚀 今すぐイベント開始
-            </button>
+          <div className="mt-3 space-y-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+            <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2.5 text-sm">
+              <span className="text-zinc-500">開始予定日時</span>
+              <input
+                type="datetime-local"
+                value={scheduledStartInput}
+                onChange={(e) => setScheduledStartInput(e.target.value)}
+                className="w-fit rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+              />
+
+              <span />
+              <label className="flex items-center gap-1.5">
+                <input type="checkbox" checked={autoStartEnabled} onChange={(e) => setAutoStartEnabled(e.target.checked)} />
+                予定日時に自動でイベント開始する
+              </label>
+
+              <span className="text-zinc-500">終了日時</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="datetime-local"
+                  value={endAtInput}
+                  onChange={(e) => setEndAtInput(e.target.value)}
+                  className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+                />
+                <span className="text-xs text-zinc-400">または</span>
+                <input
+                  type="number"
+                  value={minutes}
+                  onChange={(e) => setMinutes(Number(e.target.value))}
+                  disabled={!!endAtInput}
+                  className="w-20 rounded border border-zinc-300 px-2 py-1 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800"
+                />
+                <span>分後に終了</span>
+              </div>
+            </div>
+            <p className="text-xs text-zinc-400">
+              開始予定日時は参加者画面への案内表示に使われます。終了日時は自動開始する場合にも使われます。
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button onClick={handleSaveScheduledStart} disabled={busy} className={staffBtn.neutral}>
+                予約を保存
+              </button>
+              <button onClick={handleStart} disabled={busy} className={staffBtn.approve}>
+                🚀 今すぐイベント開始
+              </button>
+            </div>
           </div>
         )}
         {event.status === "RUNNING" && (
-          <button onClick={handleForceEnd} disabled={busy} className={staffBtn.danger}>
-            🛑 強制終了
-          </button>
+          <div className="mt-3">
+            <button onClick={handleForceEnd} disabled={busy} className={staffBtn.danger}>
+              🛑 強制終了
+            </button>
+          </div>
         )}
       </div>
 
