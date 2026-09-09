@@ -95,11 +95,16 @@ export function BonusMissionReviewQueue({ eventId, initialItems }: { eventId: st
                 </button>
               </div>
             </div>
-            <div className="mt-3 flex gap-2 overflow-x-auto">
-              {attempt.bonus_mission_photos.map((p) => (
-                <a key={p.id} href={photoUrls[p.storage_path] ?? "#"} target="_blank" rel="noreferrer">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photoUrls[p.storage_path] ?? ""} alt="ボーナスミッション証拠写真" className="h-24 w-24 rounded-lg object-cover shadow" />
+            <div className="mt-2 flex flex-wrap gap-2">
+              {attempt.bonus_mission_photos.map((p, i) => (
+                <a
+                  key={p.id}
+                  href={photoUrls[p.storage_path] ?? "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-blue-400"
+                >
+                  📎 ボーナスミッション証拠写真{attempt.bonus_mission_photos.length > 1 ? i + 1 : ""}を開く
                 </a>
               ))}
             </div>
