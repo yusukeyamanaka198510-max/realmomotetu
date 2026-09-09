@@ -95,27 +95,27 @@ export function MissionReviewQueue({
   }
 
   return (
-    <ul className="space-y-3">
-      {items.map((item) => {
-        const attempt = item.team_mission_attempts;
-        if (!attempt) return null;
-        return (
-          <li key={item.id} className="rounded-xl border-2 border-sky-300 bg-sky-50 p-3 dark:bg-sky-950">
-            <p className="text-base font-bold">
-              {item.teams?.team_name ?? "-"}
-              {attempt.attempt_number > 1 && (
-                <span className="ml-2 text-xs font-normal text-zinc-500">{attempt.attempt_number}回目の挑戦</span>
-              )}
-            </p>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              <span className="font-semibold">{attempt.mission?.title ?? "-"}</span>
-              {attempt.mission?.description && (
-                <span className="ml-2 whitespace-pre-line text-zinc-500 dark:text-zinc-500">
-                  {attempt.mission.description}
-                </span>
-              )}
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+    <div>
+      <p className="mb-2 text-xs text-zinc-500">共通の判定基準: 駅名が読める／チーム4人全員が写る</p>
+      <ul className="space-y-3">
+        {items.map((item) => {
+          const attempt = item.team_mission_attempts;
+          if (!attempt) return null;
+          // 判定基準部分は全ミッション共通のため、上の注記1回だけで足りる。ここでは課題本文だけ表示する。
+          const taskText = attempt.mission?.description.split("【判定基準】")[0].trim() ?? "";
+          return (
+            <li key={item.id} className="rounded-xl border-2 border-sky-300 bg-sky-50 p-3 dark:bg-sky-950">
+              <p className="text-base font-bold">
+                {item.teams?.team_name ?? "-"}
+                {attempt.attempt_number > 1 && (
+                  <span className="ml-2 text-xs font-normal text-zinc-500">{attempt.attempt_number}回目の挑戦</span>
+                )}
+              </p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                <span className="font-semibold">{attempt.mission?.title ?? "-"}</span>
+                {taskText && <span className="ml-2 whitespace-pre-line text-zinc-500 dark:text-zinc-500">{taskText}</span>}
+              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
               {attempt.mission_photos.map((p, i) => (
                 <a
                   key={p.id}
@@ -133,10 +133,11 @@ export function MissionReviewQueue({
               <button onClick={() => review(attempt.id, "FAILURE")} disabled={busyId === attempt.id} className={staffBtn.reject}>
                 ❌ 失敗
               </button>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
