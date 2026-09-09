@@ -60,7 +60,7 @@ export type CoinTransactionType =
   | "PROPERTY_PAYOUT"
   | "REPEAT_VISIT_BONUS"
   | "CARD_EFFECT"
-  | "LUCKY_CHANCE";
+  | "LUCKY_BONUS";
 
 export type StaffRole = "ADMIN" | "STAFF";
 
@@ -94,5 +94,5 @@ export const COIN_TRANSACTION_LABELS: Record<CoinTransactionType, string> = {
   PROPERTY_PAYOUT: "💰 物件収益",
   REPEAT_VISIT_BONUS: "🔁 再訪問ボーナス",
   CARD_EFFECT: "🎴 カード効果",
-  LUCKY_CHANCE: "🍀 ラッキーチャンス",
+  LUCKY_BONUS: "🍀 ラッキーボーナス",
 };
