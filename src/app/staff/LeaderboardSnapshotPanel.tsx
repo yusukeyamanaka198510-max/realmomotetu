@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { staffBtn } from "./StaffUI";
 
 type SnapshotRow = {
   rank: number;
@@ -13,9 +15,17 @@ type SnapshotRow = {
 
 type Snapshot = { id: string; label: string | null; taken_at: string; rows: SnapshotRow[] };
 
-export function LeaderboardSnapshotPanel() {
+export function LeaderboardSnapshotPanel({
+  intervalMinutes,
+  lastSnapshotAt,
+}: {
+  intervalMinutes: number;
+  lastSnapshotAt: string | null;
+}) {
+  const router = useRouter();
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [labelInput, setLabelInput] = useState("");
+  const [intervalInput, setIntervalInput] = useState(intervalMinutes);
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +41,18 @@ export function LeaderboardSnapshotPanel() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const supabase = createClient();
+    // 期限が来ていれば自動でスナップショットを記録するポーリング(本部画面を開いている間だけ動く)。
+    const interval = setInterval(() => {
+      supabase.rpc("fn_maybe_take_leaderboard_snapshot").then(() => {
+        void load();
+        router.refresh();
+      });
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [load, router]);
+
   async function handleTake() {
     setBusy(true);
     setError(null);
@@ -45,13 +67,47 @@ export function LeaderboardSnapshotPanel() {
     void load();
   }
 
+  async function handleSaveInterval() {
+    setBusy(true);
+    setError(null);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_set_leaderboard_snapshot_interval", { p_minutes: intervalInput });
+    setBusy(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    router.refresh();
+  }
+
   return (
     <div className="mt-8">
       <h2 className="text-lg font-semibold">順位表スナップショット(振り返り用)</h2>
       <p className="mt-1 text-xs text-zinc-500">
         任意のタイミングで現在の順位・コイン・現在地を記録できます。参加者からは見えません。
       </p>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        <span>自動記録の間隔</span>
+        <input
+          type="number"
+          min={0}
+          value={intervalInput}
+          onChange={(e) => setIntervalInput(Number(e.target.value))}
+          className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+        />
+        <span>分ごと(0=自動記録を停止)</span>
+        <button onClick={handleSaveInterval} disabled={busy} className={`ml-auto ${staffBtn.neutral}`}>
+          保存
+        </button>
+      </div>
+      {intervalMinutes > 0 && (
+        <p className="mt-1 text-xs text-zinc-400">
+          前回の自動記録: {lastSnapshotAt ? new Date(lastSnapshotAt).toLocaleString("ja-JP") : "まだありません"}
+        </p>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <input
           type="text"
           value={labelInput}
@@ -59,11 +115,7 @@ export function LeaderboardSnapshotPanel() {
           placeholder="ラベル(例: 12時時点)"
           className="rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-800"
         />
-        <button
-          disabled={busy}
-          onClick={handleTake}
-          className="rounded bg-zinc-900 px-3 py-1.5 text-sm text-white disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
-        >
+        <button disabled={busy} onClick={handleTake} className={staffBtn.primary}>
           今の順位を記録する
         </button>
       </div>

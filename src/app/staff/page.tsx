@@ -24,7 +24,7 @@ export default async function StaffPage() {
   const { data: event } = await supabase
     .from("events")
     .select(
-      "id, name, status, start_at, end_at, time_limit_minutes, default_destination_bonus_amount, leaderboard_hide_minutes_before_end, obstruction_cooldown_seconds, active_destination_station_id, active_destination:active_destination_station_id(name), dividend_interval_minutes, last_dividend_run_at, scheduled_start_at, auto_start_enabled, auto_start_time_limit_minutes, auto_start_end_at"
+      "id, name, status, start_at, end_at, time_limit_minutes, default_destination_bonus_amount, leaderboard_hide_minutes_before_end, obstruction_cooldown_seconds, active_destination_station_id, active_destination:active_destination_station_id(name), dividend_interval_minutes, last_dividend_run_at, scheduled_start_at, auto_start_enabled, auto_start_time_limit_minutes, auto_start_end_at, leaderboard_snapshot_interval_minutes, last_leaderboard_snapshot_at"
     )
     .eq("id", actor.eventId)
     .single();
@@ -298,7 +298,12 @@ export default async function StaffPage() {
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <AdminActionLogPanel ledger={(recentLedger as any) ?? []} cardLog={(recentUsageLog as any) ?? []} />
 
-      <LeaderboardSnapshotPanel />
+      {event && (
+        <LeaderboardSnapshotPanel
+          intervalMinutes={event.leaderboard_snapshot_interval_minutes}
+          lastSnapshotAt={event.last_leaderboard_snapshot_at}
+        />
+      )}
     </div>
   );
 }
