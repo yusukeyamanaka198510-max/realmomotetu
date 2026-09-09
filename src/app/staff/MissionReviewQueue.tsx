@@ -105,7 +105,12 @@ export function MissionReviewQueue({
                   )}
                 </p>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  {attempt.mission?.title ?? "-"}
+                  <span className="font-semibold">{attempt.mission?.title ?? "-"}</span>
+                  {attempt.mission?.description && (
+                    <span className="ml-2 whitespace-pre-line text-zinc-500 dark:text-zinc-500">
+                      {attempt.mission.description}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="flex gap-2">
