@@ -16,6 +16,7 @@ import { CardSlotOverlay } from "./CardSlotOverlay";
 import { DestinationArrivalOverlay } from "./DestinationArrivalOverlay";
 import { DividendAnnouncementOverlay } from "./DividendAnnouncementOverlay";
 import { BombiiCurseOverlay } from "./BombiiCurseOverlay";
+import { LuckyChanceOverlay } from "./LuckyChanceOverlay";
 import { GameStartIntro } from "./GameStartIntro";
 import { ScheduledStartCountdown } from "./ScheduledStartCountdown";
 
@@ -316,6 +317,7 @@ export default async function TeamPage() {
       <DestinationArrivalOverlay notifications={notifications ?? []} />
       <DividendAnnouncementOverlay notifications={notifications ?? []} />
       <BombiiCurseOverlay notifications={notifications ?? []} myTeamName={actor.teamName} />
+      <LuckyChanceOverlay notifications={notifications ?? []} />
 
       <DiceCardProvider
         initialState={(state?.state ?? "WAITING") as TeamGameState}
