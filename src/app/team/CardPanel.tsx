@@ -93,7 +93,6 @@ export function CardPanel({
   otherTeams,
   takeoverTargets,
   exchangeableCards,
-  notifications,
   ownProperties,
 }: {
   teamId: string;
@@ -102,7 +101,6 @@ export function CardPanel({
   otherTeams: OtherTeam[];
   takeoverTargets: TakeoverTarget[];
   exchangeableCards: ExchangeableCard[];
-  notifications: CardNotification[];
   ownProperties: OwnProperty[];
 }) {
   const router = useRouter();
@@ -140,8 +138,6 @@ export function CardPanel({
       supabase.removeChannel(channel);
     };
   }, [teamId, router]);
-
-  const visibleNotifications = useMemo(() => notifications.filter((n) => !n.message.startsWith("🎴CARD:")), [notifications]);
 
   const grouped = useMemo(() => {
     const map = new Map<CardCategory, OwnedCard[]>();
@@ -291,24 +287,6 @@ export function CardPanel({
         </div>
       )}
 
-      {visibleNotifications.length > 0 && (
-        <div className="mb-2 space-y-1.5">
-          {visibleNotifications.slice(0, 3).map((n) =>
-            n.message.startsWith("🏁") ? (
-              <p
-                key={n.id}
-                className="anim-pop rounded-xl border-2 border-game-gold bg-amber-100 p-2.5 text-xs font-bold text-amber-900 shadow-[var(--game-shadow-sm)] dark:bg-amber-900 dark:text-amber-100"
-              >
-                {n.message}
-              </p>
-            ) : (
-              <p key={n.id} className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                ⚠ {n.message}
-              </p>
-            )
-          )}
-        </div>
-      )}
       {lastMessage && <p className="mb-2 text-xs font-bold text-game-green">{lastMessage}</p>}
       {error && <p className="mb-2 text-xs font-bold text-game-red">{error}</p>}
 

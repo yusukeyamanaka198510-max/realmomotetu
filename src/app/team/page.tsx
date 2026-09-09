@@ -15,6 +15,7 @@ import { DestinationArrivalOverlay } from "./DestinationArrivalOverlay";
 import { DividendAnnouncementOverlay } from "./DividendAnnouncementOverlay";
 import { BombiiCurseOverlay } from "./BombiiCurseOverlay";
 import { LuckyChanceOverlay } from "./LuckyChanceOverlay";
+import { AnnouncementBox } from "./AnnouncementBox";
 import { GameStartIntro } from "./GameStartIntro";
 import { ScheduledStartCountdown } from "./ScheduledStartCountdown";
 
@@ -309,6 +310,7 @@ export default async function TeamPage() {
         activeEffects={activeEffects ?? []}
         hasBombii={state?.has_bombii ?? false}
       />
+      <AnnouncementBox notifications={notifications ?? []} />
       {event && <CountdownTimer eventId={event.id} endAt={event.end_at} status={event.status} />}
 
       <CardSlotOverlay notifications={notifications ?? []} />
@@ -347,7 +349,6 @@ export default async function TeamPage() {
           otherTeams={otherTeamsRaw ?? []}
           takeoverTargets={takeoverTargets}
           exchangeableCards={exchangeableCardsRaw ?? []}
-          notifications={notifications ?? []}
           ownProperties={properties}
         />
       </DiceCardProvider>
