@@ -43,6 +43,7 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [sentId, setSentId] = useState<string | null>(null);
 
   const ledgerItems: LogItem[] = ledger.map((r) => {
     const teamName = r.team?.team_name ?? "不明なチーム";
@@ -87,6 +88,8 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
     const { error } = await supabase.rpc("fn_admin_broadcast_announcement", { p_message: item.announceMessage });
     setBusyId(null);
     if (error) return window.alert(error.message);
+    setSentId(item.id);
+    setTimeout(() => setSentId((cur) => (cur === item.id ? null : cur)), 2500);
     router.refresh();
   }
 
@@ -116,13 +119,19 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
                   {it.amountLabel}
                 </span>
               )}
-              <button
-                onClick={() => handleAnnounce(it)}
-                disabled={busyId === it.id}
-                className="shrink-0 rounded-full border border-amber-400 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700 disabled:opacity-50 dark:bg-amber-950 dark:text-amber-300"
-              >
-                📢アナウンス
-              </button>
+              {sentId === it.id ? (
+                <span className="shrink-0 rounded-full border border-emerald-400 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                  ✅送信しました
+                </span>
+              ) : (
+                <button
+                  onClick={() => handleAnnounce(it)}
+                  disabled={busyId === it.id}
+                  className="shrink-0 rounded-full border border-amber-400 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700 disabled:opacity-50 dark:bg-amber-950 dark:text-amber-300"
+                >
+                  {busyId === it.id ? "送信中…" : "📢アナウンス"}
+                </button>
+              )}
             </li>
           ))}
         </ul>
