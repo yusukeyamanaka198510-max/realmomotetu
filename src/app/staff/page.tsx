@@ -130,6 +130,7 @@ export default async function StaffPage() {
     .from("card_usage_log")
     .select("id, used_at, result, announced_at, card:card_id(name), team:team_id(team_name), target_team:target_team_id(team_name)")
     .eq("event_id", actor.eventId)
+    .is("hidden_from_log_at", null)
     .order("used_at", { ascending: false })
     .limit(30);
 
@@ -137,6 +138,7 @@ export default async function StaffPage() {
     .from("coin_ledger")
     .select("id, amount, transaction_type, reason, created_at, announced_at, team:team_id(team_name)")
     .eq("event_id", actor.eventId)
+    .is("hidden_from_log_at", null)
     .order("created_at", { ascending: false })
     .limit(40);
 

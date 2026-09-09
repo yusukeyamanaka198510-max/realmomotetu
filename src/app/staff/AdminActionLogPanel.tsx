@@ -52,6 +52,7 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
   // announced_atはDB側(coin_ledger/card_usage_log)に永続化されているため、再読み込みしても消えない。
   // ここではrouter.refresh()が返ってくる前の一瞬だけ先回りして表示するために使う。
   const [optimisticSentIds, setOptimisticSentIds] = useState<Set<string>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
   const ledgerItems: LogItem[] = ledger.map((r) => {
     const teamName = r.team?.team_name ?? "不明なチーム";
@@ -93,7 +94,10 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
     };
   });
 
-  const items = [...ledgerItems, ...cardItems].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 60);
+  const items = [...ledgerItems, ...cardItems]
+    .filter((it) => !hiddenIds.has(it.id))
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, 60);
 
   async function handleAnnounce(item: LogItem) {
     if (!window.confirm(`全チームへアナウンスします:\n\n「${item.announceMessage}」\n\nよろしいですか?`)) return;
@@ -107,6 +111,20 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
     setBusyId(null);
     if (error) return window.alert(error.message);
     setOptimisticSentIds((prev) => new Set(prev).add(item.id));
+    router.refresh();
+  }
+
+  async function handleHide(item: LogItem) {
+    if (!window.confirm("この項目をログ一覧から削除します(記録自体は残ります)。よろしいですか?")) return;
+    setBusyId(item.id);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_hide_log_item", {
+      p_source_table: item.sourceTable,
+      p_source_id: item.sourceId,
+    });
+    setBusyId(null);
+    if (error) return window.alert(error.message);
+    setHiddenIds((prev) => new Set(prev).add(item.id));
     router.refresh();
   }
 
@@ -149,6 +167,14 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
                   {busyId === it.id ? "送信中…" : "📢アナウンス"}
                 </button>
               )}
+              <button
+                onClick={() => handleHide(it)}
+                disabled={busyId === it.id}
+                title="この項目をログ一覧から削除"
+                className="shrink-0 rounded-full border border-zinc-300 bg-white px-2 py-1 text-[10px] font-bold text-zinc-500 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
+              >
+                🗑️
+              </button>
             </li>
           ))}
         </ul>
