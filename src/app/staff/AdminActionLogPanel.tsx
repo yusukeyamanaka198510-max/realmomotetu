@@ -12,12 +12,14 @@ type LedgerRow = {
   transaction_type: CoinTransactionType;
   reason: string | null;
   created_at: string;
+  announced_at: string | null;
   team: { team_name: string } | null;
 };
 type CardLogRow = {
   id: string;
   used_at: string;
   result: string;
+  announced_at: string | null;
   card: { name: string } | null;
   team: { team_name: string } | null;
   target_team: { team_name: string } | null;
@@ -25,12 +27,15 @@ type CardLogRow = {
 
 type LogItem = {
   id: string;
+  sourceTable: "coin_ledger" | "card_usage_log";
+  sourceId: string;
   at: string;
   icon: string;
   text: string;
   amountLabel: string | null;
   amountTone: "up" | "down" | null;
   announceMessage: string;
+  announced: boolean;
 };
 
 const CARD_RESULT_LABEL: Record<string, string> = {
@@ -43,9 +48,10 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
-  // 一度アナウンス済みの項目は、間違って同じ内容を連投しないようボタンを戻さずそのままにする
-  // (このブラウザ表示中のみ有効。ページを再読み込みすると忘れる)。
-  const [sentIds, setSentIds] = useState<Set<string>>(new Set());
+  // 一度アナウンス済みの項目は、間違って同じ内容を連投しないようボタンを戻さずそのままにする。
+  // announced_atはDB側(coin_ledger/card_usage_log)に永続化されているため、再読み込みしても消えない。
+  // ここではrouter.refresh()が返ってくる前の一瞬だけ先回りして表示するために使う。
+  const [optimisticSentIds, setOptimisticSentIds] = useState<Set<string>>(new Set());
 
   const ledgerItems: LogItem[] = ledger.map((r) => {
     const teamName = r.team?.team_name ?? "不明なチーム";
@@ -56,12 +62,15 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
     const detail = `${labelText}${r.reason ? `(${r.reason})` : ""}`;
     return {
       id: `ledger-${r.id}`,
+      sourceTable: "coin_ledger" as const,
+      sourceId: r.id,
       at: r.created_at,
       icon,
       text: `${teamName}: ${detail}`,
       amountLabel: `${r.amount >= 0 ? "+" : ""}${formatYen(r.amount)}`,
       amountTone: r.amount >= 0 ? "up" : "down",
       announceMessage: `${teamName}が${detail}で${r.amount >= 0 ? "+" : ""}${formatYen(r.amount)}!`,
+      announced: r.announced_at !== null,
     };
   });
 
@@ -72,12 +81,15 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
     const targetPart = r.target_team ? ` → 対象: ${r.target_team.team_name}` : "";
     return {
       id: `card-${r.id}`,
+      sourceTable: "card_usage_log" as const,
+      sourceId: r.id,
       at: r.used_at,
       icon: "🎴",
       text: `${teamName}が「${cardName}」を使用(${resultLabel})${targetPart}`,
       amountLabel: null,
       amountTone: null,
       announceMessage: `${teamName}が「${cardName}」を使用しました!${r.target_team ? `(対象: ${r.target_team.team_name})` : ""}`,
+      announced: r.announced_at !== null,
     };
   });
 
@@ -87,10 +99,14 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
     if (!window.confirm(`全チームへアナウンスします:\n\n「${item.announceMessage}」\n\nよろしいですか?`)) return;
     setBusyId(item.id);
     const supabase = createClient();
-    const { error } = await supabase.rpc("fn_admin_broadcast_announcement", { p_message: item.announceMessage });
+    const { error } = await supabase.rpc("fn_admin_broadcast_announcement", {
+      p_message: item.announceMessage,
+      p_source_table: item.sourceTable,
+      p_source_id: item.sourceId,
+    });
     setBusyId(null);
     if (error) return window.alert(error.message);
-    setSentIds((prev) => new Set(prev).add(item.id));
+    setOptimisticSentIds((prev) => new Set(prev).add(item.id));
     router.refresh();
   }
 
@@ -120,7 +136,7 @@ export function AdminActionLogPanel({ ledger, cardLog }: { ledger: LedgerRow[]; 
                   {it.amountLabel}
                 </span>
               )}
-              {sentIds.has(it.id) ? (
+              {it.announced || optimisticSentIds.has(it.id) ? (
                 <span className="shrink-0 rounded-full border border-emerald-400 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
                   ✅送信済み
                 </span>
