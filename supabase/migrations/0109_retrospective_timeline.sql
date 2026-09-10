@@ -1,6 +1,8 @@
 -- 振り返り発表資料ダッシュボード用の集約RPC。
--- 到着・ミッション・ボーナスミッション・ゴール到達・カード使用・その他コイン増減を
--- チーム横断の時系列イベント配列として返す(参加者(自チーム以外含む)・本部どちらも呼び出し可)。
+-- 到着・ミッション・ボーナスミッション・ゴール到達・カード使用・その他コイン増減・到着却下(理由つき)・
+-- ボンビー付与を、チーム横断の時系列イベント配列として返す(参加者(自チーム以外含む)・本部どちらも呼び出し可)。
+-- 却下理由・ボンビー付与はaudit_logから拾う(本部限定だった内部記録を、この振り返り機能に限り
+-- 参加者にも公開する設計判断による。audit_logのRLS自体は変更しない)。
 -- 写真は storage_path のみを返す。署名付きURLの発行はサーバー側(管理者クライアント)で行うため、
 -- このRPC自体はStorageへのアクセス権限を一切変更しない。
 
@@ -102,6 +104,23 @@ begin
     where tm5.event_id = v_event_id
       and cl.hidden_from_log_at is null
       and cl.transaction_type not in ('MISSION_SUCCESS', 'MISSION_FAILURE', 'MISSION_5X_BONUS', 'DESTINATION_BONUS', 'CARD_EFFECT')
+
+    union all
+    -- 到着却下(本部差し戻し。却下理由つき)
+    select al.team_id, al.created_at, 'STAFF_REJECT',
+      jsonb_build_object('reason', al.reason),
+      array[]::text[]
+    from audit_log al
+    where al.event_id = v_event_id and al.action_type = 'ARRIVAL_REJECT' and al.team_id is not null
+
+    union all
+    -- ボンビー付与
+    select al.team_id, al.created_at, 'BOMBII_ASSIGNED',
+      jsonb_build_object('from_station_name', s3.name),
+      array[]::text[]
+    from audit_log al
+    left join stations s3 on s3.id = nullif(al.after_value->>'from_station', '')::uuid
+    where al.event_id = v_event_id and al.action_type = 'BOMBII_ASSIGNED' and al.team_id is not null
   )
   select jsonb_agg(jsonb_build_object(
       'team_id', combined.team_id, 'at', combined.at, 'kind', combined.kind,

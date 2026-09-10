@@ -18,7 +18,7 @@ export type RetrospectiveTeam = {
 
 export type RetrospectiveEvent = {
   at: string;
-  kind: "ARRIVAL" | "MISSION" | "BONUS_MISSION" | "DESTINATION_CLEAR" | "CARD_USE" | "COIN";
+  kind: "ARRIVAL" | "MISSION" | "BONUS_MISSION" | "DESTINATION_CLEAR" | "CARD_USE" | "COIN" | "STAFF_REJECT" | "BOMBII_ASSIGNED";
   detail: Record<string, unknown>;
   photoUrls: string[];
 };
@@ -116,6 +116,24 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
       );
       break;
     }
+    case "STAFF_REJECT":
+      icon = "🙅";
+      body = (
+        <span>
+          本部による到着差し戻し
+          {d.reason ? <span className="text-zinc-500"> 「{String(d.reason)}」</span> : null}
+        </span>
+      );
+      break;
+    case "BOMBII_ASSIGNED":
+      icon = "😈";
+      body = (
+        <span>
+          ボンビーが取り憑いた!
+          {d.from_station_name ? <span className="text-zinc-500">({String(d.from_station_name)}から)</span> : null}
+        </span>
+      );
+      break;
   }
 
   return (
