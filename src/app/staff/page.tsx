@@ -194,6 +194,9 @@ export default async function StaffPage() {
           )}
         </h1>
         <div className="flex gap-4">
+          <Link href="/retrospective" className="text-sm text-zinc-500 hover:underline">
+            振り返り →
+          </Link>
           <Link href="/staff/manage" className="text-sm text-zinc-500 hover:underline">
             駅・路線・ミッション管理 →
           </Link>
