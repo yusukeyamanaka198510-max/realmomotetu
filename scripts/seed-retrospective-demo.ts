@@ -32,10 +32,26 @@ const admin = createClient(url, serviceRoleKey, {
 });
 
 const EVIDENCE_BUCKET = "evidence-photos";
-// 1x1の最小PNG(黒)。全チーム・全写真で使い回すプレースホルダー。
-const PLACEHOLDER_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-  "base64"
+// 適当な電車イラスト(SVG)。全チーム・全写真で使い回すプレースホルダー。
+// <img>はSVGをそのまま描画できるため、ビットマップ画像ライブラリなしで用意できる。
+const PLACEHOLDER_SVG = Buffer.from(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#dff0ff"/>
+  <circle cx="340" cy="50" r="30" fill="#ffd54a"/>
+  <rect x="0" y="220" width="400" height="80" fill="#8bc98b"/>
+  <rect x="0" y="200" width="400" height="24" fill="#b0b0b0"/>
+  <rect x="40" y="140" width="220" height="70" rx="10" fill="#1e3a5f"/>
+  <rect x="60" y="150" width="50" height="35" rx="4" fill="#ffd54a"/>
+  <rect x="130" y="150" width="50" height="35" rx="4" fill="#ffd54a"/>
+  <circle cx="80" cy="215" r="16" fill="#222"/>
+  <circle cx="220" cy="215" r="16" fill="#222"/>
+  <circle cx="150" cy="230" r="12" fill="#e0a030"/>
+  <circle cx="150" cy="250" r="18" fill="#f2c14e"/>
+  <circle cx="300" cy="230" r="12" fill="#e0a030"/>
+  <circle cx="300" cy="250" r="18" fill="#f2c14e"/>
+  <text x="200" y="288" font-size="22" text-anchor="middle" fill="#1e3a5f" font-family="sans-serif" font-weight="bold">リアル桃鉄(デモ写真)</text>
+</svg>`,
+  "utf-8"
 );
 
 const MISSION_DEFAULT_REWARD: Record<string, number> = { EASY: 10_000_000, NORMAL: 20_000_000, HARD: 30_000_000 };
@@ -84,13 +100,13 @@ async function main() {
 
   const { data: cards } = await admin.from("cards").select("id, name").eq("enabled", true);
 
-  const { data: destinationQueue } = await admin
+  const { data: allDestinationQueue } = await admin
     .from("destination_queue")
     .select("id, sequence_order, status")
     .eq("event_id", event.id)
-    .in("status", ["PENDING", "ACTIVE"])
-    .order("sequence_order")
-    .limit(2);
+    .order("sequence_order");
+  const clearableDestinations = (allDestinationQueue ?? []).filter((d) => d.status === "PENDING" || d.status === "ACTIVE").slice(0, 2);
+  const maxSequenceOrder = (allDestinationQueue ?? []).reduce((max, d) => Math.max(max, d.sequence_order), 0);
 
   console.log(`イベント: ${event.name}(status=${event.status}, id=${event.id})`);
   console.log(`対象チーム: ${teams.length}組 (${teams.map((t) => t.team_name).join(", ")})`);
@@ -109,11 +125,11 @@ async function main() {
     return;
   }
 
-  console.log("プレースホルダー画像をアップロード中...");
-  const demoPhotoPath = `${event.id}/_demo/placeholder.png`;
+  console.log("プレースホルダー画像(イラスト)をアップロード中...");
+  const demoPhotoPath = `${event.id}/_demo/placeholder.svg`;
   const { error: uploadError } = await admin.storage
     .from(EVIDENCE_BUCKET)
-    .upload(demoPhotoPath, PLACEHOLDER_PNG, { contentType: "image/png", upsert: true });
+    .upload(demoPhotoPath, PLACEHOLDER_SVG, { contentType: "image/svg+xml", upsert: true });
   if (uploadError) throw uploadError;
 
   const baseTime = new Date();
@@ -320,12 +336,37 @@ async function main() {
     console.log(`  完了(資産額デモ値: ${coinBalance.toLocaleString()}円)`);
   }
 
-  // ゴール到達を最大2チーム分(資産額にもボーナスを反映する)
-  if (destinationQueue && destinationQueue.length > 0) {
+  // ゴール到達を最大2チーム分(資産額にもボーナスを反映する)。
+  // 使えるPENDING/ACTIVEの目的地が無ければ、既存駅を使ってデモ用に作る
+  // (destination_queueは本部の「最終目的地(ゴール)」設定そのものなので、本番投入前提の環境で
+  // 実行する場合はこの自動生成に注意。リハーサルリセットで削除できる)。
+  let destinationsToClear = clearableDestinations;
+  if (destinationsToClear.length === 0) {
+    console.log("\ndestination_queueが未設定のため、デモ用に2件作成します...");
+    const demoStations = stations.slice(0, 2);
+    const { data: createdDq, error: dqError } = await admin
+      .from("destination_queue")
+      .insert(
+        demoStations.map((s, idx) => ({
+          event_id: event.id,
+          station_id: s.id,
+          sequence_order: maxSequenceOrder + idx + 1,
+          status: "PENDING",
+        }))
+      )
+      .select("id, sequence_order, status");
+    if (dqError) {
+      console.error("  destination_queue作成失敗:", dqError.message);
+    } else {
+      destinationsToClear = createdDq ?? [];
+    }
+  }
+
+  if (destinationsToClear.length > 0) {
     console.log("\nゴール到達デモを投入中...");
     const bonusAmount = 50_000_000;
-    for (let i = 0; i < Math.min(2, destinationQueue.length, teams.length); i++) {
-      const dq = destinationQueue[i];
+    for (let i = 0; i < Math.min(2, destinationsToClear.length, teams.length); i++) {
+      const dq = destinationsToClear[i];
       const team = teams[i];
       await admin
         .from("destination_queue")
@@ -353,7 +394,7 @@ async function main() {
       console.log(`  第${dq.sequence_order}ゴール → ${team.team_name}`);
     }
   } else {
-    console.log("\n(destination_queueが未設定のため、ゴール到達デモはスキップしました)");
+    console.log("\n(destination_queue用の駅が確保できず、ゴール到達デモはスキップしました)");
   }
 
   console.log("\n投入完了。/retrospective で確認してください。");
