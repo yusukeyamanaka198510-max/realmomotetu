@@ -16,7 +16,8 @@ type RawEvent = {
 
 export default async function RetrospectivePage() {
   const actor = await getActor();
-  if (actor.kind !== "team" && actor.kind !== "staff") redirect("/login");
+  // 参加者の顔写真・却下理由・ボンビー付与記録などを含むため、本部限定にしている。
+  if (actor.kind !== "staff") redirect("/login");
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("fn_retrospective_timeline");
@@ -53,13 +54,11 @@ export default async function RetrospectivePage() {
     eventsByTeam.set(e.team_id, list);
   }
 
-  const backHref = actor.kind === "staff" ? "/staff" : "/team";
-
   return (
     <div className="min-h-dvh bg-cover bg-top bg-fixed" style={{ backgroundImage: "url(/board-illustration.webp)" }}>
       <div className="min-h-dvh bg-white/60 dark:bg-slate-950/75">
         <div className="mx-auto max-w-2xl space-y-4 p-6">
-          <Link href={backHref} className="text-sm text-zinc-500 hover:underline">
+          <Link href="/staff" className="text-sm text-zinc-500 hover:underline">
             ← TOPに戻る
           </Link>
           <RetrospectiveClient

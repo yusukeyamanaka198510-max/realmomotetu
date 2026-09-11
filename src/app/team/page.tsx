@@ -40,12 +40,6 @@ export default async function TeamPage() {
             <div className="flex items-center justify-between">
               <h1 className="font-game text-lg font-black text-game-navy dark:text-game-gold">🚃 {actor.teamName}</h1>
               <Link
-                href="/retrospective"
-                className="shrink-0 rounded-full border-2 border-zinc-300 bg-white px-2.5 py-1 text-xs font-bold text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-              >
-                振り返り
-              </Link>
-              <Link
                 href="/team/mypage"
                 className="shrink-0 rounded-full border-2 border-zinc-300 bg-white px-2.5 py-1 text-xs font-bold text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
               >

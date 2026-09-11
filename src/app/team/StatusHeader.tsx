@@ -73,14 +73,9 @@ export function StatusHeader({
           {representativeName && <span className="ml-1.5 text-sm font-bold text-zinc-400">({representativeName})</span>}
           {hasBombii && <span className="ml-1.5 align-middle text-base" title="ボンビー憑依中">😈</span>}
         </h1>
-        <div className="flex shrink-0 gap-1.5">
-          <Link href="/retrospective" className="rounded-full border-2 border-zinc-300 px-2.5 py-1 text-xs font-bold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
-            振り返り
-          </Link>
-          <Link href="/team/mypage" className="rounded-full border-2 border-zinc-300 px-2.5 py-1 text-xs font-bold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
-            マイページ
-          </Link>
-        </div>
+        <Link href="/team/mypage" className="shrink-0 rounded-full border-2 border-zinc-300 px-2.5 py-1 text-xs font-bold text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
+          マイページ
+        </Link>
       </div>
 
       {!isEventOver && (
