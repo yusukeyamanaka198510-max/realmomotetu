@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { GamePanel, GameBadge, GameText } from "@/components/game-ui";
+import { GamePanel, GameBadge, GameText, ConfettiBurst } from "@/components/game-ui";
 import { formatYen } from "@/lib/game/format";
 import { COIN_TRANSACTION_LABELS, type CoinTransactionType } from "@/lib/game/types";
 
@@ -182,6 +182,19 @@ export function RetrospectiveClient({
 }) {
   const router = useRouter();
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(teams[0]?.team_id ?? null);
+  const [revealed, setRevealed] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  function selectTeam(teamId: string) {
+    setSelectedTeamId(teamId);
+    setRevealed(false);
+  }
+
+  function reveal() {
+    setRevealed(true);
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 2500);
+  }
 
   useEffect(() => {
     const supabase = createClient();
@@ -237,20 +250,20 @@ export function RetrospectiveClient({
           <button
             key={t.team_id}
             type="button"
-            onClick={() => setSelectedTeamId(t.team_id)}
+            onClick={() => selectTeam(t.team_id)}
             className={`shrink-0 rounded-full border-2 px-3 py-1.5 text-sm font-bold ${
               t.team_id === selectedTeamId
                 ? "border-game-navy bg-game-navy text-white dark:border-game-gold dark:bg-game-gold dark:text-slate-900"
                 : "border-zinc-300 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
             }`}
           >
-            {t.team_name}
+            {t.rank}位
           </button>
         ))}
       </div>
 
       {selectedTeam && (
-        <GamePanel title={`${selectedTeam.team_name} の1日`} icon="📷" accent="navy">
+        <GamePanel title="今日のできごと" icon="📷" accent="navy">
           {selectedEvents.length === 0 ? (
             <p className="text-sm text-zinc-400">まだ記録がありません</p>
           ) : (
@@ -261,7 +274,22 @@ export function RetrospectiveClient({
             </ul>
           )}
           <div className="mt-4">
-            <TeamResultHero team={selectedTeam} />
+            {revealed ? (
+              <>
+                {showConfetti && <ConfettiBurst />}
+                <TeamResultHero team={selectedTeam} />
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={reveal}
+                className="anim-pop w-full rounded-[var(--game-radius-lg)] border-4 border-dashed border-game-gold bg-gradient-to-b from-amber-50 to-amber-100 p-8 text-center shadow-[var(--game-shadow-md)] dark:from-amber-950 dark:to-slate-900"
+              >
+                <p className="text-4xl">🎁</p>
+                <p className="mt-2 text-lg font-black text-game-navy dark:text-game-gold">どのチーム?</p>
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">タップして結果を発表!</p>
+              </button>
+            )}
           </div>
         </GamePanel>
       )}
