@@ -12,6 +12,7 @@ import { CountdownTimer } from "@/components/CountdownTimer";
 import { StatusHeader } from "./StatusHeader";
 import { CardSlotOverlay } from "./CardSlotOverlay";
 import { DestinationArrivalOverlay } from "./DestinationArrivalOverlay";
+import { GoalBroadcastOverlay } from "./GoalBroadcastOverlay";
 import { DividendAnnouncementOverlay } from "./DividendAnnouncementOverlay";
 import { BombiiCurseOverlay } from "./BombiiCurseOverlay";
 import { LuckyChanceOverlay } from "./LuckyChanceOverlay";
@@ -328,6 +329,7 @@ export default async function TeamPage() {
 
       <CardSlotOverlay notifications={notifications ?? []} />
       <DestinationArrivalOverlay notifications={notifications ?? []} />
+      <GoalBroadcastOverlay notifications={notifications ?? []} />
       <DividendAnnouncementOverlay notifications={notifications ?? []} />
       <BombiiCurseOverlay notifications={notifications ?? []} myTeamName={actor.teamName} />
       <LuckyChanceOverlay notifications={notifications ?? []} />
