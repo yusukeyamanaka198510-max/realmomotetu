@@ -48,6 +48,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
   const d = event.detail;
   let icon = "📌";
   let body: React.ReactNode = null;
+  let subBody: React.ReactNode = null;
 
   switch (event.kind) {
     case "ARRIVAL":
@@ -67,6 +68,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
           )}
         </span>
       );
+      if (d.description) subBody = String(d.description);
       break;
     }
     case "BONUS_MISSION": {
@@ -81,6 +83,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
           )}
         </span>
       );
+      if (d.description) subBody = String(d.description);
       break;
     }
     case "DESTINATION_CLEAR":
@@ -114,6 +117,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
           </span>
         </span>
       );
+      if (d.reason) subBody = String(d.reason);
       break;
     }
     case "STAFF_REJECT":
@@ -143,6 +147,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
         <div className="min-w-0 flex-1">
           <p className="text-xs text-zinc-400">{timeLabel(event.at)}</p>
           <p>{body}</p>
+          {subBody && <p className="mt-0.5 text-xs text-zinc-500">{subBody}</p>}
           <PhotoGallery urls={event.photoUrls} />
         </div>
       </div>
