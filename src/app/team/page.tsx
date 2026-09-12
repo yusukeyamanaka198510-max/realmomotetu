@@ -18,6 +18,7 @@ import { LuckyChanceOverlay } from "./LuckyChanceOverlay";
 import { AnnouncementBox } from "./AnnouncementBox";
 import { GameStartIntro } from "./GameStartIntro";
 import { ScheduledStartCountdown } from "./ScheduledStartCountdown";
+import { StartStationPicker } from "./StartStationPicker";
 
 export default async function TeamPage() {
   const actor = await getActor();
@@ -33,6 +34,13 @@ export default async function TeamPage() {
     .single();
 
   if (event?.status === "SCHEDULED") {
+    const { data: stations } = await supabase.from("stations").select("id, name").eq("event_id", actor.eventId);
+    const { data: scheduledState } = await supabase
+      .from("team_state")
+      .select("selected_start_station_id")
+      .eq("team_id", actor.teamId)
+      .single();
+
     return (
       <div className="min-h-dvh bg-cover bg-top bg-fixed" style={{ backgroundImage: "url(/board-illustration.webp)" }}>
         <div className="flex min-h-dvh flex-col bg-white/55 dark:bg-slate-950/70">
@@ -47,12 +55,16 @@ export default async function TeamPage() {
               </Link>
             </div>
           </div>
-          <div className="mx-auto flex w-full max-w-md flex-1 items-center p-6">
+          <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 p-6">
             <div className="anim-pop w-full rounded-[var(--game-radius-lg)] border-4 border-game-gold bg-gradient-to-b from-game-navy to-slate-900 p-8 text-center shadow-[var(--game-shadow-lg)]">
               <p className="text-5xl">⏳</p>
               <p className="game-text-event mt-3 text-2xl text-white">イベント開始前です</p>
               <ScheduledStartCountdown scheduledStartAt={event.scheduled_start_at} />
             </div>
+            <StartStationPicker
+              stations={stations ?? []}
+              initialSelectedStationId={scheduledState?.selected_start_station_id ?? null}
+            />
           </div>
         </div>
       </div>
@@ -329,6 +341,7 @@ export default async function TeamPage() {
           eventId={actor.eventId}
           initialState={state?.state ?? "WAITING"}
           nextStationName={nextStationName}
+          startStationName={currentStationName}
           missionAttempt={missionAttempt}
           offeredMissions={offeredMissions}
           diceResult={diceResult}

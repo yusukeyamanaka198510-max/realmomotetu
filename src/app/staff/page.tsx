@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getActor } from "@/lib/game/actor";
 import { createClient } from "@/lib/supabase/server";
 import { ArrivalReviewQueue } from "./ArrivalReviewQueue";
+import { StartCheckinReviewQueue } from "./StartCheckinReviewQueue";
 import { MissionReviewQueue } from "./MissionReviewQueue";
 import { EventControlPanel } from "./EventControlPanel";
 import { TeamAdminPanel } from "./TeamAdminPanel";
@@ -24,7 +25,7 @@ export default async function StaffPage() {
   const { data: event } = await supabase
     .from("events")
     .select(
-      "id, name, status, start_at, end_at, time_limit_minutes, default_destination_bonus_amount, leaderboard_hide_minutes_before_end, obstruction_cooldown_seconds, active_destination_station_id, active_destination:active_destination_station_id(name), dividend_interval_minutes, last_dividend_run_at, scheduled_start_at, auto_start_enabled, auto_start_time_limit_minutes, auto_start_end_at, leaderboard_snapshot_interval_minutes, last_leaderboard_snapshot_at"
+      "id, name, status, start_at, end_at, time_limit_minutes, default_destination_bonus_amount, leaderboard_hide_minutes_before_end, obstruction_cooldown_seconds, active_destination_station_id, active_destination:active_destination_station_id(name), dividend_interval_minutes, last_dividend_run_at, scheduled_start_at, auto_start_enabled, auto_start_time_limit_minutes, auto_start_end_at, leaderboard_snapshot_interval_minutes, last_leaderboard_snapshot_at, start_station_id, start_station:start_station_id(name)"
     )
     .eq("id", actor.eventId)
     .single();
@@ -69,6 +70,27 @@ export default async function StaffPage() {
   const pendingArrivals = (queueRows ?? []).map((r) => ({
     ...r,
     arrival_submissions: arrivalRows?.find((a) => a.id === r.ref_id) ?? null,
+  }));
+
+  const { data: startCheckinQueueRows } = await supabase
+    .from("review_queue")
+    .select("id, ref_id, team_id, created_at, teams:team_id(team_name)")
+    .eq("event_id", actor.eventId)
+    .eq("type", "START_CHECKIN")
+    .eq("status", "OPEN")
+    .order("created_at");
+
+  const startCheckinRefIds = (startCheckinQueueRows ?? []).map((r) => r.ref_id);
+  const { data: startCheckinRows } = startCheckinRefIds.length
+    ? await supabase
+        .from("team_start_checkins")
+        .select("id, submitted_at, station:station_id(name), start_checkin_photos(id, storage_path)")
+        .in("id", startCheckinRefIds)
+    : { data: [] };
+
+  const pendingStartCheckins = (startCheckinQueueRows ?? []).map((r) => ({
+    ...r,
+    team_start_checkins: startCheckinRows?.find((c) => c.id === r.ref_id) ?? null,
   }));
 
   const { data: missionQueueRows } = await supabase
@@ -143,7 +165,7 @@ export default async function StaffPage() {
     .limit(40);
 
   const pendingCountByTeam = new Map<string, number>();
-  for (const r of [...(queueRows ?? []), ...(missionQueueRows ?? []), ...(bonusMissionQueueRows ?? [])]) {
+  for (const r of [...(queueRows ?? []), ...(missionQueueRows ?? []), ...(bonusMissionQueueRows ?? []), ...(startCheckinQueueRows ?? [])]) {
     pendingCountByTeam.set(r.team_id, (pendingCountByTeam.get(r.team_id) ?? 0) + 1);
   }
 
@@ -180,7 +202,7 @@ export default async function StaffPage() {
   const maxCoin = teamRows.length ? Math.max(...teamRows.map((t) => t.coin_balance_cache)) : null;
   const topTeams = maxCoin !== null ? teamRows.filter((t) => t.coin_balance_cache === maxCoin) : [];
 
-  const totalPending = pendingArrivals.length + pendingMissions.length + pendingBonusMissions.length;
+  const totalPending = pendingArrivals.length + pendingMissions.length + pendingBonusMissions.length + pendingStartCheckins.length;
 
   return (
     <div className="mx-auto max-w-3xl p-6">
@@ -207,6 +229,11 @@ export default async function StaffPage() {
       </div>
 
       {/* 触る頻度の高い操作(承認キュー)を上位に、開始/終了などの設定系は下に配置している。 */}
+
+      <StaffSection icon="🚉" title="スタートチェックイン確認待ち" count={pendingStartCheckins.length} accent="sky">
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        <StartCheckinReviewQueue eventId={actor.eventId} initialItems={(pendingStartCheckins as any) ?? []} />
+      </StaffSection>
 
       <StaffSection icon="🚩" title="到着確認待ち" count={pendingArrivals.length} accent="amber">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -295,7 +322,15 @@ export default async function StaffPage() {
 
       <StaffSection icon="⚙️" title="イベント制御(開始/終了/各種設定)" accent="zinc">
         <PasswordChangePanel />
-        {event && <EventControlPanel event={event} topTeams={topTeams} />}
+        {event && (
+          <EventControlPanel
+            event={event}
+            topTeams={topTeams}
+            stations={stations ?? []}
+            // @ts-expect-error 1:1リレーションが配列型で推論されるため
+            startStationName={event.start_station?.name ?? null}
+          />
+        )}
       </StaffSection>
 
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}

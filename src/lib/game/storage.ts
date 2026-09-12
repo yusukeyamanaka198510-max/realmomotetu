@@ -16,6 +16,16 @@ export function arrivalPhotoPath(
   return `${eventId}/${teamId}/arrival/${idempotencyKey}/${index}.${safeExtension(fileName)}`;
 }
 
+export function startCheckinPhotoPath(
+  eventId: string,
+  teamId: string,
+  idempotencyKey: string,
+  index: number,
+  fileName: string
+) {
+  return `${eventId}/${teamId}/start_checkin/${idempotencyKey}/${index}.${safeExtension(fileName)}`;
+}
+
 export function missionPhotoPath(
   eventId: string,
   teamId: string,

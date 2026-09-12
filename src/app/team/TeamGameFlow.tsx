@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { EVIDENCE_BUCKET, arrivalPhotoPath, missionPhotoPath } from "@/lib/game/storage";
+import { EVIDENCE_BUCKET, arrivalPhotoPath, missionPhotoPath, startCheckinPhotoPath } from "@/lib/game/storage";
 import type { TeamGameState } from "@/lib/game/types";
 import { formatYen } from "@/lib/game/format";
 import { DiceAnimation, type DicePhase } from "./DiceAnimation";
@@ -37,6 +37,7 @@ export function TeamGameFlow({
   eventId,
   initialState,
   nextStationName,
+  startStationName,
   missionAttempt,
   offeredMissions,
   diceResult,
@@ -51,6 +52,7 @@ export function TeamGameFlow({
   eventId: string;
   initialState: TeamGameState;
   nextStationName: string | null;
+  startStationName: string | null;
   missionAttempt: MissionAttempt | null;
   offeredMissions: OfferedMission[];
   diceResult: DiceResult | null;
@@ -66,6 +68,7 @@ export function TeamGameFlow({
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [missionFiles, setMissionFiles] = useState<File[]>([]);
+  const [startCheckinFiles, setStartCheckinFiles] = useState<File[]>([]);
   const [stationQuery, setStationQuery] = useState("");
   const { dicePhase, canStopDice, rollingDiceCount, rollPlainDice, stopDice, diceLanded } = useDiceCard();
   // 振り始めた直後はサーバーの本当の出目(diceResult)がまだ届いていないことがあるため、
@@ -211,6 +214,42 @@ export function TeamGameFlow({
       if (rpcError) throw rpcError;
 
       setFiles([]);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "提出に失敗しました");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleSubmitStartCheckin() {
+    if (startCheckinFiles.length !== 1) {
+      setError("写真を1枚アップロードしてください");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    const supabase = createClient();
+    const idempotencyKey = crypto.randomUUID();
+
+    try {
+      const paths: string[] = [];
+      for (let i = 0; i < startCheckinFiles.length; i++) {
+        const path = startCheckinPhotoPath(eventId, teamId, idempotencyKey, i, startCheckinFiles[i].name);
+        const { error: uploadError } = await supabase.storage
+          .from(EVIDENCE_BUCKET)
+          .upload(path, startCheckinFiles[i]);
+        if (uploadError) throw uploadError;
+        paths.push(path);
+      }
+
+      const { error: rpcError } = await supabase.rpc("fn_submit_start_checkin", {
+        p_photo_paths: paths,
+        p_idempotency_key: idempotencyKey,
+      });
+      if (rpcError) throw rpcError;
+
+      setStartCheckinFiles([]);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "提出に失敗しました");
@@ -504,6 +543,32 @@ export function TeamGameFlow({
 
       {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
 
+      {initialState === "START_CHECKIN" && (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+            🚉 スタート駅「{startStationName ?? "-"}」で写真を1枚提出してください
+          </p>
+          <label className="block w-full cursor-pointer rounded border border-dashed border-zinc-400 p-4 text-center text-sm hover:bg-zinc-50 active:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-900">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setStartCheckinFiles(Array.from(e.target.files ?? []).slice(0, 1))}
+              className="hidden"
+            />
+            {startCheckinFiles.length > 0 ? "1枚選択済み(タップして変更)" : "タップして写真を選択"}
+          </label>
+          <GameButton onClick={handleSubmitStartCheckin} disabled={busy || startCheckinFiles.length === 0} variant="primary" className="w-full">
+            {busy ? "提出中..." : "📸 提出する"}
+          </GameButton>
+        </div>
+      )}
+
+      {initialState === "START_CHECKIN_REVIEW" && (
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          本部の確認をお待ちください...
+        </p>
+      )}
+
       {initialState === "TRAVELING" && (
         <div className="space-y-3">
           <p className="text-sm">
@@ -721,6 +786,8 @@ export function TeamGameFlow({
       )}
 
       {![
+        "START_CHECKIN",
+        "START_CHECKIN_REVIEW",
         "TRAVELING",
         "ARRIVAL_SUBMISSION",
         "ARRIVAL_REVIEW",

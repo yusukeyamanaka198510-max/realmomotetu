@@ -20,6 +20,7 @@ type EventInfo = {
   auto_start_enabled: boolean;
   auto_start_time_limit_minutes: number | null;
   auto_start_end_at: string | null;
+  start_station_id: string | null;
 };
 
 // datetime-local入力用にローカルタイムゾーンの "YYYY-MM-DDTHH:mm" 形式へ変換
@@ -33,12 +34,17 @@ function toDatetimeLocalValue(iso: string | null): string {
 export function EventControlPanel({
   event,
   topTeams,
+  stations,
+  startStationName,
 }: {
   event: EventInfo;
   topTeams: { team_name: string; coin_balance_cache: number }[];
+  stations: { id: string; name: string }[];
+  startStationName: string | null;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [startStationId, setStartStationId] = useState(event.start_station_id ?? "");
   const [minutes, setMinutes] = useState(event.auto_start_time_limit_minutes ?? event.time_limit_minutes ?? 240);
   const [hideMinutes, setHideMinutes] = useState(event.leaderboard_hide_minutes_before_end);
   const [endAtInput, setEndAtInput] = useState(toDatetimeLocalValue(event.auto_start_end_at ?? event.end_at));
@@ -160,6 +166,16 @@ export function EventControlPanel({
     router.refresh();
   }
 
+  async function handleSaveStartStation() {
+    if (!startStationId) return;
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_set_start_station", { p_station_id: startStationId });
+    setBusy(false);
+    if (error) return window.alert(error.message);
+    router.refresh();
+  }
+
   async function handleSaveHideMinutes() {
     setBusy(true);
     const supabase = createClient();
@@ -196,6 +212,28 @@ export function EventControlPanel({
 
         {event.status === "SCHEDULED" && (
           <div className="mt-3 space-y-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-zinc-500">
+                デフォルトのスタート駅{startStationName ? `(現在: ${startStationName})` : "(未設定)"}
+              </span>
+              <select
+                value={startStationId}
+                onChange={(e) => setStartStationId(e.target.value)}
+                className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+              >
+                <option value="">駅を選択...</option>
+                {stations.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <button onClick={handleSaveStartStation} disabled={busy || !startStationId} className={`ml-auto ${staffBtn.neutral}`}>
+                保存
+              </button>
+              <p className="w-full text-xs text-zinc-400">スタート駅を選ばなかったチームは、この駅からスタートします。</p>
+            </div>
+
             <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2.5 text-sm">
               <span className="text-zinc-500">開始予定日時</span>
               <input

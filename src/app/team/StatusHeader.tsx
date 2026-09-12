@@ -6,6 +6,8 @@ import { formatYen } from "@/lib/game/format";
 
 const ACTION_LABEL: Record<TeamGameState, string> = {
   WAITING: "本部の開始を待っています",
+  START_CHECKIN: "スタート駅で写真を提出する",
+  START_CHECKIN_REVIEW: "本部確認中…",
   DICE_READY: "サイコロを振る",
   ROLLING: "サイコロを振る",
   DESTINATION_SELECTION: "移動する駅を選ぶ",
