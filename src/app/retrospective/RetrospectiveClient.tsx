@@ -154,7 +154,7 @@ function TeamResultHero({ team }: { team: RetrospectiveTeam }) {
   return (
     <div className="anim-pop rounded-[var(--game-radius-lg)] border-4 border-game-gold bg-gradient-to-b from-game-navy to-slate-900 p-6 text-center shadow-[var(--game-shadow-lg)]">
       <p className="text-sm font-bold text-white/70">最終結果</p>
-      <p className="mt-1 text-5xl">{RANK_MEDAL[team.rank] ?? `${team.rank}位`}</p>
+      <p className="mt-1 text-4xl font-black text-white">{team.rank}位</p>
       <GameText as="h2" variant="title" className="mt-2 block !text-white">
         {team.team_name}
       </GameText>
