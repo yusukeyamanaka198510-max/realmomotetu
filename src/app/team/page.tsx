@@ -198,12 +198,16 @@ export default async function TeamPage() {
 
   let properties: { id: string; name: string; price: number; yield_amount: number; description: string }[] = [];
   if (state?.state === "PROPERTY_PURCHASE" && state.current_station_id) {
-    const { data } = await supabase
-      .from("station_properties")
-      .select("id, name, price, yield_amount, description")
-      .eq("station_id", state.current_station_id)
-      .eq("is_active", true);
-    properties = data ?? [];
+    const [{ data }, { data: ownedRows }] = await Promise.all([
+      supabase
+        .from("station_properties")
+        .select("id, name, price, yield_amount, description")
+        .eq("station_id", state.current_station_id)
+        .eq("is_active", true),
+      supabase.rpc("fn_get_owned_property_ids"),
+    ]);
+    const ownedIds = new Set((ownedRows ?? []).map((r: { property_id: string }) => r.property_id));
+    properties = (data ?? []).filter((p) => !ownedIds.has(p.id));
   }
 
   const { data: myPropertyPurchases } = await supabase
