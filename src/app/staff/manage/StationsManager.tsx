@@ -21,6 +21,7 @@ export function StationsManager({
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState("");
+  const [randomCount, setRandomCount] = useState(Math.min(15, stations.length));
 
   async function handleAdd() {
     if (!name.trim()) return;
@@ -49,6 +50,34 @@ export function StationsManager({
     router.refresh();
   }
 
+  async function handleRandomizeCandidates() {
+    const count = Math.max(1, Math.min(randomCount, stations.length));
+    if (!window.confirm(`ゴール候補駅を、ランダムな${count}駅に選び直します(今のチェックは全て外れます)。よろしいですか?`)) return;
+
+    // Fisher-Yates
+    const shuffled = [...stations];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const chosenIds = shuffled.slice(0, count).map((s) => s.id);
+
+    setBusy(true);
+    const supabase = createClient();
+    const { error: clearError } = await supabase
+      .from("stations")
+      .update({ is_destination_candidate: false })
+      .eq("is_destination_candidate", true);
+    if (clearError) {
+      setBusy(false);
+      return window.alert(clearError.message);
+    }
+    const { error: setError } = await supabase.from("stations").update({ is_destination_candidate: true }).in("id", chosenIds);
+    setBusy(false);
+    if (setError) return window.alert(setError.message);
+    router.refresh();
+  }
+
   const linesOf = (stationId: string) =>
     stationLines.filter((sl) => sl.station_id === stationId).map((sl) => lines.find((l) => l.id === sl.line_id)?.name);
 
@@ -60,6 +89,28 @@ export function StationsManager({
       <h2 className="text-lg font-semibold">
         駅({stations.length}駅 / ゴール候補{candidateCount}駅)
       </h2>
+      <div className="mt-2 flex flex-wrap items-center gap-2 rounded border border-zinc-200 p-2 text-sm dark:border-zinc-800">
+        <span className="text-zinc-500">ゴール候補駅をランダムに選び直す:</span>
+        <input
+          type="number"
+          min={1}
+          max={stations.length}
+          value={randomCount}
+          onChange={(e) => setRandomCount(Number(e.target.value))}
+          className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+        />
+        <span className="text-zinc-500">駅</span>
+        <button
+          onClick={handleRandomizeCandidates}
+          disabled={busy}
+          className="ml-auto rounded bg-zinc-900 px-3 py-1 text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+        >
+          🎲 選び直す
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-zinc-400">
+        リハーサルと本番で同じ駅・同じ順序になりがちなのを防ぎたいときに使います。実行すると今のチェックは全て外れ、ランダムに選ばれた駅だけがチェックされます。
+      </p>
       <input
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
