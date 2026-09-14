@@ -36,7 +36,7 @@ export default async function TeamPage() {
     .single();
 
   if (event?.status === "SCHEDULED") {
-    const { data: stations } = await supabase.from("stations").select("id, name").eq("event_id", actor.eventId);
+    const { data: stations } = await supabase.rpc("fn_list_connected_stations");
     const { data: scheduledState } = await supabase
       .from("team_state")
       .select("selected_start_station_id")

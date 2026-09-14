@@ -51,19 +51,36 @@ export function StationsManager({
   }
 
   async function handleRandomizeCandidates() {
-    const count = Math.max(1, Math.min(randomCount, stations.length));
-    if (!window.confirm(`ゴール候補駅を、ランダムな${count}駅に選び直します(今のチェックは全て外れます)。よろしいですか?`)) return;
+    setBusy(true);
+    const supabase = createClient();
+
+    // 有効な接続を1本も持たない孤立駅は、選ばれても誰も辿り着けないためゴール候補から除外する。
+    const { data: connected, error: connectedError } = await supabase.rpc("fn_list_connected_stations");
+    if (connectedError) {
+      setBusy(false);
+      return window.alert(connectedError.message);
+    }
+    const connectedIds = new Set((connected ?? []).map((s: { id: string }) => s.id));
+    const candidatePool = stations.filter((s) => connectedIds.has(s.id));
+    if (candidatePool.length === 0) {
+      setBusy(false);
+      return window.alert("接続のある駅が見つかりませんでした");
+    }
+
+    const count = Math.max(1, Math.min(randomCount, candidatePool.length));
+    if (!window.confirm(`ゴール候補駅を、ランダムな${count}駅に選び直します(今のチェックは全て外れます)。よろしいですか?`)) {
+      setBusy(false);
+      return;
+    }
 
     // Fisher-Yates
-    const shuffled = [...stations];
+    const shuffled = [...candidatePool];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
     const chosenIds = shuffled.slice(0, count).map((s) => s.id);
 
-    setBusy(true);
-    const supabase = createClient();
     const { error: clearError } = await supabase
       .from("stations")
       .update({ is_destination_candidate: false })
