@@ -44,6 +44,12 @@ export default async function StaffPage() {
     .eq("event_id", actor.eventId)
     .order("name");
 
+  // 有効な接続(edge)を1本も持たない孤立駅を、現在駅/次駅の手動補正・デフォルトスタート駅・
+  // ゴール手動設定の各プルダウンから除外する(選ぶと即詰みになるため)。
+  const { data: connectedStations } = await supabase.rpc("fn_list_connected_stations");
+  const connectedStationIds = new Set((connectedStations ?? []).map((s: { id: string }) => s.id));
+  const reachableStations = (stations ?? []).filter((s) => connectedStationIds.has(s.id));
+
   const { data: destinationHistory } = await supabase
     .from("destination_queue")
     .select("id, sequence_order, bonus_coin_amount, cleared_at, station:station_id(name), team:cleared_by_team_id(team_name)")
@@ -257,7 +263,7 @@ export default async function StaffPage() {
             activeStationName={event.active_destination?.name ?? null}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             history={(destinationHistory as any) ?? []}
-            stations={stations ?? []}
+            stations={reachableStations}
             defaultBonus={event.default_destination_bonus_amount}
           />
         </StaffSection>
@@ -309,7 +315,7 @@ export default async function StaffPage() {
       </StaffSection>
 
       <StaffSection icon="🛠️" title="チーム個別操作" accent="zinc">
-        <TeamAdminPanel teams={teamRows} stations={stations ?? []} allCards={allCards ?? []} />
+        <TeamAdminPanel teams={teamRows} stations={reachableStations} allCards={allCards ?? []} />
       </StaffSection>
 
       <StaffSection icon="🎴" title="採用カード選択" accent="zinc">
@@ -326,7 +332,7 @@ export default async function StaffPage() {
           <EventControlPanel
             event={event}
             topTeams={topTeams}
-            stations={stations ?? []}
+            stations={reachableStations}
             // @ts-expect-error 1:1リレーションが配列型で推論されるため
             startStationName={event.start_station?.name ?? null}
           />
