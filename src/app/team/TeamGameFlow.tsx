@@ -107,13 +107,29 @@ export function TeamGameFlow({
   }, [initialState]);
 
   const sortedStations = useMemo(
-    () => [...reachableStations].sort((a, b) => a.name.localeCompare(b.name, "ja")),
-    [reachableStations]
+    () =>
+      [...reachableStations].sort((a, b) => {
+        const da = goalDistanceByStationId[a.id];
+        const db = goalDistanceByStationId[b.id];
+        if (da === undefined && db === undefined) return a.name.localeCompare(b.name, "ja");
+        if (da === undefined) return 1;
+        if (db === undefined) return -1;
+        if (da !== db) return da - db;
+        return a.name.localeCompare(b.name, "ja");
+      }),
+    [reachableStations, goalDistanceByStationId]
   );
   const filteredStations = useMemo(
     () => (stationQuery.trim() ? sortedStations.filter((s) => s.name.includes(stationQuery.trim())) : sortedStations),
     [sortedStations, stationQuery]
   );
+
+  // 前ターンの検索文字列が残ったまま新しい出目の候補に適用され、
+  // 一致0件で移動先が何も表示されなくなる不具合を防ぐため、候補が変わったらリセットする。
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 出目候補(reachableStations)が変わった瞬間に検索文字列を同期リセットするための意図的なsetState
+    setStationQuery("");
+  }, [reachableStations]);
 
   useEffect(() => {
     const supabase = createClient();
