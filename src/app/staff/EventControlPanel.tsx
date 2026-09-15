@@ -15,12 +15,14 @@ type EventInfo = {
   leaderboard_hide_minutes_before_end: number;
   obstruction_cooldown_seconds: number;
   dividend_interval_minutes: number;
+  dividend_scheduled_times: string[];
   last_dividend_run_at: string | null;
   scheduled_start_at: string | null;
   auto_start_enabled: boolean;
   auto_start_time_limit_minutes: number | null;
   auto_start_end_at: string | null;
   start_station_id: string | null;
+  min_destination_distance_hops: number;
 };
 
 // datetime-local入力用にローカルタイムゾーンの "YYYY-MM-DDTHH:mm" 形式へ変換
@@ -51,6 +53,9 @@ export function EventControlPanel({
   const [nameDraft, setNameDraft] = useState(event.name);
   const [cooldownSeconds, setCooldownSeconds] = useState(event.obstruction_cooldown_seconds);
   const [dividendMinutes, setDividendMinutes] = useState(event.dividend_interval_minutes);
+  const [dividendTimes, setDividendTimes] = useState<string[]>(event.dividend_scheduled_times ?? []);
+  const [newDividendTime, setNewDividendTime] = useState("");
+  const [minDistanceHops, setMinDistanceHops] = useState(event.min_destination_distance_hops);
   const [scheduledStartInput, setScheduledStartInput] = useState(toDatetimeLocalValue(event.scheduled_start_at));
   const [autoStartEnabled, setAutoStartEnabled] = useState(event.auto_start_enabled);
 
@@ -129,6 +134,34 @@ export function EventControlPanel({
     setBusy(true);
     const supabase = createClient();
     const { error } = await supabase.rpc("fn_admin_set_dividend_interval", { p_minutes: dividendMinutes });
+    setBusy(false);
+    if (error) return window.alert(error.message);
+    router.refresh();
+  }
+
+  function handleAddDividendTime() {
+    if (!newDividendTime) return;
+    if (dividendTimes.includes(newDividendTime)) {
+      setNewDividendTime("");
+      return;
+    }
+    setDividendTimes([...dividendTimes, newDividendTime].sort());
+    setNewDividendTime("");
+  }
+
+  async function handleSaveDividendTimes(times: string[]) {
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_set_dividend_schedule", { p_times: times });
+    setBusy(false);
+    if (error) return window.alert(error.message);
+    router.refresh();
+  }
+
+  async function handleSaveMinDistanceHops() {
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_admin_set_min_destination_distance", { p_hops: minDistanceHops });
     setBusy(false);
     if (error) return window.alert(error.message);
     router.refresh();
@@ -352,6 +385,62 @@ export function EventControlPanel({
             📈 今すぐ配当を実行
           </button>
         </div>
+        <div className="border-t border-zinc-100 pt-2 dark:border-zinc-800">
+          <p className="text-xs text-zinc-500">
+            時刻を1つ以上指定すると、上の「◯分ごと」より優先してその時刻(日本時間)に配当を実行します(本番で毎時00分に実行したい場合などに使用)。
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <input
+              type="time"
+              value={newDividendTime}
+              onChange={(e) => setNewDividendTime(e.target.value)}
+              className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+            />
+            <button onClick={handleAddDividendTime} disabled={busy || !newDividendTime} className={staffBtn.neutral}>
+              追加
+            </button>
+            <button
+              onClick={() => handleSaveDividendTimes(dividendTimes)}
+              disabled={busy}
+              className={`ml-auto ${staffBtn.primary}`}
+            >
+              時刻指定を保存
+            </button>
+          </div>
+          {dividendTimes.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {dividendTimes.map((t) => (
+                <span
+                  key={t}
+                  className="flex items-center gap-1 rounded-full border border-zinc-300 px-2 py-0.5 text-xs dark:border-zinc-700"
+                >
+                  {t}
+                  <button
+                    onClick={() => setDividendTimes(dividendTimes.filter((x) => x !== t))}
+                    className="text-zinc-400 hover:text-red-600"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-zinc-200 pt-3 text-sm dark:border-zinc-800">
+        <span>次ゴールの最低距離</span>
+        <input
+          type="number"
+          min={0}
+          value={minDistanceHops}
+          onChange={(e) => setMinDistanceHops(Number(e.target.value))}
+          className="w-16 rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700 dark:bg-zinc-800"
+        />
+        <span>マス(直前のゴールからこの距離以上離れた駅のみ次ゴール候補にする。路線を増やすと同じ値でも実際の範囲が広がるので注意)</span>
+        <button onClick={handleSaveMinDistanceHops} disabled={busy} className={`ml-auto ${staffBtn.neutral}`}>
+          保存
+        </button>
       </div>
 
       {isEnded && topTeams.length === 1 && (
