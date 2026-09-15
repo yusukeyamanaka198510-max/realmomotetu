@@ -62,10 +62,15 @@ export function EventControlPanel({
         router.refresh()
       )
       .subscribe();
-    // 参加者が誰もアクセスしていない間も自動開始・ラッキーチャンスが働くよう、本部画面側からもポーリングする。
+    // 参加者の端末がロック・バックグラウンド化してポーリングが止まっていても、定期配当や
+    // 順位表記録が確実に動くよう、本部画面側からもポーリングする(チーム画面のみに
+    // 依存していたため、全チームの端末が同時に非アクティブだと定期配当が実行されない
+    // 不具合があった)。
     const autoStartInterval = setInterval(() => {
       supabase.rpc("fn_maybe_auto_start_event").then(() => router.refresh());
       supabase.rpc("fn_maybe_run_lucky_hourly_bonus");
+      supabase.rpc("fn_maybe_run_dividend_settlement").then(() => router.refresh());
+      supabase.rpc("fn_maybe_take_leaderboard_snapshot");
     }, 10000);
     return () => {
       supabase.removeChannel(channel);

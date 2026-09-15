@@ -345,6 +345,7 @@ export function CardPanel({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog">
           <div className="anim-pop flex aspect-square w-full max-w-[280px] flex-col items-center justify-center overflow-y-auto rounded-[var(--game-radius-lg)] border-2 border-zinc-300 bg-white p-5 text-center shadow-[var(--game-shadow-lg)] dark:border-zinc-700 dark:bg-zinc-900">
           <p className="text-base font-bold">{pendingCard.name}を使用</p>
+          {error && <p className="mt-2 text-xs font-bold text-game-red">{error}</p>}
           {pendingCard.target_type === "OTHER_TEAM" && needsPayload(pendingCard) !== "takeover" && (
             <select
               value={targetTeamId}
