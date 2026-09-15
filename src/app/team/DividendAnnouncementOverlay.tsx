@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { GameButton } from "@/components/game-ui";
 import { formatYen } from "@/lib/game/format";
+import { isOverlayShown, markOverlayShown } from "./notificationOverlayStorage";
 
 type DividendNotification = { id: string; message: string; created_at: string };
 
@@ -12,16 +13,19 @@ function parseDividendNotification(message: string): { amount: number } | null {
   return { amount: match ? Number(match[1].replace(/,/g, "")) : 0 };
 }
 
+const NAMESPACE = "dividend";
+
 export function DividendAnnouncementOverlay({ notifications }: { notifications: DividendNotification[] }) {
   const [active, setActive] = useState<{ amount: number } | null>(null);
 
-  const latest = notifications.find((n) => parseDividendNotification(n.message)) ?? null;
+  const latest = notifications.find((n) => parseDividendNotification(n.message) && !isOverlayShown(NAMESPACE, n.id)) ?? null;
   const latestId = latest?.id ?? null;
 
   useEffect(() => {
     if (!latestId) return;
     const parsed = latest ? parseDividendNotification(latest.message) : null;
     if (!parsed) return;
+    markOverlayShown(NAMESPACE, latestId);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 新着配当通知検知に応じた意図的な演出開始
     setActive(parsed);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- latestが変わる時は必ずlatestIdも変わるため十分

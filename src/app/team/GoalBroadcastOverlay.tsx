@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ConfettiBurst, SparkleField } from "@/components/game-ui";
+import { isOverlayShown, markOverlayShown } from "./notificationOverlayStorage";
 
 type Notif = { id: string; message: string; created_at: string };
 
@@ -11,10 +12,12 @@ function parseGoalBroadcast(message: string): { teamName: string; station: strin
   return { teamName: match[1], station: match[2], nextStation: match[3] };
 }
 
+const NAMESPACE = "goal_broadcast";
+
 export function GoalBroadcastOverlay({ notifications }: { notifications: Notif[] }) {
   const [active, setActive] = useState<{ teamName: string; station: string; nextStation: string } | null>(null);
 
-  const latest = notifications.find((n) => parseGoalBroadcast(n.message)) ?? null;
+  const latest = notifications.find((n) => parseGoalBroadcast(n.message) && !isOverlayShown(NAMESPACE, n.id)) ?? null;
   const latestId = latest?.id ?? null;
 
   useEffect(() => {
@@ -22,6 +25,7 @@ export function GoalBroadcastOverlay({ notifications }: { notifications: Notif[]
     const parsed = latest ? parseGoalBroadcast(latest.message) : null;
     if (!parsed) return;
 
+    markOverlayShown(NAMESPACE, latestId);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 新着ゴール到達通知検知に応じた意図的な演出開始
     setActive(parsed);
     const dismissTimer = setTimeout(() => setActive(null), 3500);

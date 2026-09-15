@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ConfettiBurst, SpeedLines } from "@/components/game-ui";
 import { formatYen } from "@/lib/game/format";
+import { isOverlayShown, markOverlayShown } from "./notificationOverlayStorage";
 
 type ArrivalNotification = { id: string; message: string; created_at: string };
 
@@ -12,11 +13,13 @@ function parseSelfArrival(message: string): { station: string; amount: number; n
   return { station: match[1], amount: Number(match[2].replace(/,/g, "")), nextStation: match[3] };
 }
 
+const NAMESPACE = "destination_arrival";
+
 export function DestinationArrivalOverlay({ notifications }: { notifications: ArrivalNotification[] }) {
   const [active, setActive] = useState<{ station: string; amount: number; nextStation: string } | null>(null);
   const [stage, setStage] = useState<"in" | "settled">("in");
 
-  const latest = notifications.find((n) => parseSelfArrival(n.message)) ?? null;
+  const latest = notifications.find((n) => parseSelfArrival(n.message) && !isOverlayShown(NAMESPACE, n.id)) ?? null;
   const latestId = latest?.id ?? null;
 
   useEffect(() => {
@@ -24,6 +27,7 @@ export function DestinationArrivalOverlay({ notifications }: { notifications: Ar
     const parsed = latest ? parseSelfArrival(latest.message) : null;
     if (!parsed) return;
 
+    markOverlayShown(NAMESPACE, latestId);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 新着到達通知検知に応じた意図的な演出開始
     setActive(parsed);
     setStage("in");

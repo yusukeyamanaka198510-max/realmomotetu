@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ConfettiBurst, SparkleField } from "@/components/game-ui";
 import { formatYen } from "@/lib/game/format";
+import { isOverlayShown, markOverlayShown } from "./notificationOverlayStorage";
 
 type Notif = { id: string; message: string; created_at: string };
 
@@ -16,6 +17,8 @@ function parseFunding(message: string): number | null {
   return match ? Number(match[1].replace(/,/g, "")) : null;
 }
 
+const NAMESPACE = "event_start";
+
 export function EventStartOverlay({ notifications }: { notifications: Notif[] }) {
   const destNotif = notifications.find((n) => parseDestination(n.message)) ?? null;
   const fundNotif = notifications.find((n) => parseFunding(n.message)) ?? null;
@@ -24,6 +27,11 @@ export function EventStartOverlay({ notifications }: { notifications: Notif[] })
 
   useEffect(() => {
     if (!destNotif && !fundNotif) return;
+    // 画面のリロード(スマホのロック解除等を含む)のたびに、既に見た通知の内容で
+    // このモーダルが何度も再表示されてしまっていたため、同じ端末で表示済みの
+    // 組み合わせは二度と出さないようにする。
+    if (isOverlayShown(NAMESPACE, comboKey)) return;
+    markOverlayShown(NAMESPACE, comboKey);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 新着イベント開始通知検知に応じた意図的な演出開始
     setStage(destNotif ? "destination" : "funding");
     const timers: ReturnType<typeof setTimeout>[] = [];

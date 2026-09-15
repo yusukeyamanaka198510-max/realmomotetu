@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ConfettiBurst, SparkleField } from "@/components/game-ui";
 import { formatYen } from "@/lib/game/format";
+import { isOverlayShown, markOverlayShown } from "./notificationOverlayStorage";
 
 type LuckyNotification = { id: string; message: string; created_at: string };
 
@@ -12,11 +13,13 @@ function parseLuckyBonus(message: string): { copy: string; amount: number } | nu
   return { copy: match[1], amount: Number(match[2].replace(/,/g, "")) };
 }
 
+const NAMESPACE = "lucky_bonus";
+
 export function LuckyChanceOverlay({ notifications }: { notifications: LuckyNotification[] }) {
   const [active, setActive] = useState<{ copy: string; amount: number } | null>(null);
   const [stage, setStage] = useState<"in" | "settled">("in");
 
-  const latest = notifications.find((n) => parseLuckyBonus(n.message)) ?? null;
+  const latest = notifications.find((n) => parseLuckyBonus(n.message) && !isOverlayShown(NAMESPACE, n.id)) ?? null;
   const latestId = latest?.id ?? null;
 
   useEffect(() => {
@@ -24,6 +27,7 @@ export function LuckyChanceOverlay({ notifications }: { notifications: LuckyNoti
     const parsed = latest ? parseLuckyBonus(latest.message) : null;
     if (!parsed) return;
 
+    markOverlayShown(NAMESPACE, latestId);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 新着ラッキーボーナス通知検知に応じた意図的な演出開始
     setActive(parsed);
     setStage("in");
