@@ -22,26 +22,60 @@ import { GameStartIntro } from "./GameStartIntro";
 import { ScheduledStartCountdown } from "./ScheduledStartCountdown";
 import { StartStationPicker } from "./StartStationPicker";
 
+const NULL_RESULT = Promise.resolve({ data: null }) as Promise<{ data: null }>;
+
 export default async function TeamPage() {
   const actor = await getActor();
   if (actor.kind !== "team") redirect("/login");
 
   const supabase = await createClient();
-  const { data: event } = await supabase
-    .from("events")
-    .select(
-      "id, status, end_at, active_destination_station_id, active_destination:active_destination_station_id(name), scheduled_start_at"
-    )
-    .eq("id", actor.eventId)
-    .single();
+
+  // 第1波: actor.teamId / actor.eventId だけで決まり、互いに依存しないクエリをまとめて並列実行する。
+  // (以前は1つずつawaitで逐次実行しており、反応の遅さの主因になっていた)
+  const [
+    { data: event },
+    { data: state },
+    { data: myPropertyPurchases },
+    { data: myCardsRaw },
+    { data: otherTeamsStatusRaw },
+    { data: exchangeableCardsRaw },
+    { data: takeoverTargetsRaw },
+    { data: notifications },
+    { data: activeEffects },
+  ] = await Promise.all([
+    supabase
+      .from("events")
+      .select(
+        "id, status, end_at, active_destination_station_id, active_destination:active_destination_station_id(name), scheduled_start_at"
+      )
+      .eq("id", actor.eventId)
+      .single(),
+    supabase
+      .from("team_state")
+      .select(
+        "state, coin_balance_cache, mission_success_count, current_turn_id, current_station_id, current_station:current_station_id(name), has_bombii, selected_start_station_id"
+      )
+      .eq("team_id", actor.teamId)
+      .single(),
+    supabase.from("team_property_purchases").select("price_paid").eq("team_id", actor.teamId).eq("settled", false),
+    supabase
+      .from("team_cards")
+      .select("card_id, quantity, card:card_id(card_code, name, category, rarity, description, effect_type, effect_value, target_type)")
+      .eq("team_id", actor.teamId)
+      .gt("quantity", 0),
+    supabase.rpc("fn_get_other_teams_status"),
+    supabase.from("cards").select("card_code, name, rarity").eq("enabled", true).eq("exchangeable", true).neq("card_code", "VOUCHER"),
+    supabase
+      .from("team_property_purchases")
+      .select("id, team_id, price_paid, property:property_id(name), team:team_id(team_name)")
+      .neq("team_id", actor.teamId)
+      .eq("settled", false),
+    supabase.from("card_notifications").select("id, message, created_at").eq("team_id", actor.teamId).order("created_at", { ascending: false }).limit(10),
+    supabase.from("card_active_effects").select("id, effect_type, payload").eq("team_id", actor.teamId).is("consumed_at", null),
+  ]);
 
   if (event?.status === "SCHEDULED") {
     const { data: stations } = await supabase.rpc("fn_list_connected_stations");
-    const { data: scheduledState } = await supabase
-      .from("team_state")
-      .select("selected_start_station_id")
-      .eq("team_id", actor.teamId)
-      .single();
 
     return (
       <div className="min-h-dvh bg-cover bg-top bg-fixed" style={{ backgroundImage: "url(/board-illustration.webp)" }}>
@@ -65,7 +99,7 @@ export default async function TeamPage() {
             </div>
             <StartStationPicker
               stations={stations ?? []}
-              initialSelectedStationId={scheduledState?.selected_start_station_id ?? null}
+              initialSelectedStationId={state?.selected_start_station_id ?? null}
             />
           </div>
         </div>
@@ -75,98 +109,107 @@ export default async function TeamPage() {
 
   // @ts-expect-error 1:1リレーションが配列型で推論されるため
   const destinationStationName: string | null = event?.active_destination?.name ?? null;
-  const { data: state } = await supabase
-    .from("team_state")
-    .select(
-      "state, coin_balance_cache, mission_success_count, current_turn_id, current_station_id, current_station:current_station_id(name), has_bombii"
-    )
-    .eq("team_id", actor.teamId)
-    .single();
 
-  let nextStationName: string | null = null;
-  if (state?.current_turn_id) {
-    const { data: turn } = await supabase
-      .from("turns")
-      .select("next_station:next_station_id(name)")
-      .eq("id", state.current_turn_id)
-      .maybeSingle();
-    // @ts-expect-error 1:1リレーションが配列型で推論されるため
-    nextStationName = turn?.next_station?.name ?? null;
-  }
+  const needsTurn = !!state?.current_turn_id;
+  const needsDiceRoll = !!state?.current_turn_id && state.state === "DESTINATION_SELECTION";
+  const needsMissionAttempt = !!state?.current_turn_id && ["MISSION_SELECTION", "MISSION_ACTIVE", "MISSION_REVIEW"].includes(state.state);
+  const needsBonusAttempt = !!state?.current_turn_id;
+  const needsProperties = state?.state === "PROPERTY_PURCHASE" && !!state.current_station_id;
+  const needsDistances = !!event?.active_destination_station_id;
 
+  // 第2波: state/eventの結果が確定して初めて条件が決まるクエリ群。互いには依存しないので、これも並列実行する。
+  const [
+    { data: turn },
+    { data: diceRoll },
+    { data: missionAttemptRow },
+    { data: bonusMissionAttempt },
+    { data: propertiesRaw },
+    { data: ownedRows },
+    { data: distances },
+  ] = await Promise.all([
+    needsTurn
+      ? supabase.from("turns").select("next_station:next_station_id(name)").eq("id", state!.current_turn_id as string).maybeSingle()
+      : NULL_RESULT,
+    needsDiceRoll
+      ? supabase
+          .from("dice_rolls")
+          .select("id, total, individual_results")
+          .eq("turn_id", state!.current_turn_id as string)
+          .eq("is_valid", true)
+          .order("rolled_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : NULL_RESULT,
+    needsMissionAttempt
+      ? supabase
+          .from("team_mission_attempts")
+          .select("id, offered_mission_ids, selected_mission_id, status")
+          .eq("team_id", actor.teamId)
+          .eq("turn_id", state!.current_turn_id as string)
+          .order("attempt_number", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : NULL_RESULT,
+    needsBonusAttempt
+      ? supabase
+          .from("team_bonus_mission_attempts")
+          .select("id, title, description, reward, status")
+          .eq("team_id", actor.teamId)
+          .eq("turn_id", state!.current_turn_id as string)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : NULL_RESULT,
+    needsProperties
+      ? supabase
+          .from("station_properties")
+          .select("id, name, price, yield_amount, description")
+          .eq("station_id", state!.current_station_id as string)
+          .eq("is_active", true)
+      : NULL_RESULT,
+    needsProperties ? supabase.rpc("fn_get_owned_property_ids") : NULL_RESULT,
+    needsDistances ? supabase.rpc("fn_station_distances_from", { p_from: event!.active_destination_station_id as string }) : NULL_RESULT,
+  ]);
+
+  // @ts-expect-error 1:1リレーションが配列型で推論されるため
+  const nextStationName: string | null = turn?.next_station?.name ?? null;
   // @ts-expect-error 1:1リレーションが配列型で推論されるため
   const currentStationName: string | null = state?.current_station?.name ?? null;
 
-  let diceResult: { total: number; individual_results: number[] } | null = null;
-  let reachableStations: { id: string; name: string }[] = [];
-
-  if (state?.current_turn_id && state.state === "DESTINATION_SELECTION") {
-    const { data: diceRoll } = await supabase
-      .from("dice_rolls")
-      .select("id, total, individual_results")
-      .eq("turn_id", state.current_turn_id)
-      .eq("is_valid", true)
-      .order("rolled_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (diceRoll) {
-      diceResult = { total: diceRoll.total, individual_results: diceRoll.individual_results as number[] };
-      const { data: snapshot } = await supabase
-        .from("reachable_stations_snapshot")
-        .select("station:station_id(id, name)")
-        .eq("dice_roll_id", diceRoll.id);
-      reachableStations = (snapshot ?? [])
-        .map((s) => s.station as unknown as { id: string; name: string } | null)
-        .filter((s): s is { id: string; name: string } => !!s);
-    }
-  }
-
-  let goalDistanceByStationId: Record<string, number> = {};
-  if (event?.active_destination_station_id) {
-    const { data: distances } = await supabase.rpc("fn_station_distances_from", {
-      p_from: event.active_destination_station_id,
-    });
-    goalDistanceByStationId = Object.fromEntries(
-      (distances ?? []).map((d: { station_id: string; hops: number }) => [d.station_id, d.hops])
-    );
-  }
+  const goalDistanceByStationId: Record<string, number> = Object.fromEntries(
+    ((distances ?? []) as { station_id: string; hops: number }[]).map((d) => [d.station_id, d.hops])
+  );
   const currentGoalDistance: number | null =
     state?.current_station_id && goalDistanceByStationId[state.current_station_id] !== undefined
       ? goalDistanceByStationId[state.current_station_id]
       : null;
 
-  let missionAttempt: {
-    id: string;
-    offered_mission_ids: string[];
-    selected_mission_id: string | null;
-    status: string;
-  } | null = null;
-  let offeredMissions: {
+  // 第3波: 第2波の結果(diceRoll.id / missionAttemptの提示ミッションID)が無いと組み立てられないクエリ。
+  const [{ data: snapshot }, { data: missions }] = await Promise.all([
+    diceRoll
+      ? supabase.from("reachable_stations_snapshot").select("station:station_id(id, name)").eq("dice_roll_id", diceRoll.id)
+      : NULL_RESULT,
+    missionAttemptRow?.offered_mission_ids?.length
+      ? supabase.from("station_missions").select("id, title, description, difficulty, success_reward").in("id", missionAttemptRow.offered_mission_ids)
+      : NULL_RESULT,
+  ]);
+
+  const diceResult: { total: number; individual_results: number[] } | null = diceRoll
+    ? { total: diceRoll.total, individual_results: diceRoll.individual_results as number[] }
+    : null;
+  const reachableStations: { id: string; name: string }[] = (snapshot ?? [])
+    .map((s) => s.station as unknown as { id: string; name: string } | null)
+    .filter((s): s is { id: string; name: string } => !!s);
+
+  const missionAttempt = missionAttemptRow;
+  const offeredMissions: {
     id: string;
     title: string;
     description: string;
     difficulty: MissionDifficulty;
     reward: number;
-  }[] = [];
-
-  if (state?.current_turn_id && ["MISSION_SELECTION", "MISSION_ACTIVE", "MISSION_REVIEW"].includes(state.state)) {
-    const { data: attempt } = await supabase
-      .from("team_mission_attempts")
-      .select("id, offered_mission_ids, selected_mission_id, status")
-      .eq("team_id", actor.teamId)
-      .eq("turn_id", state.current_turn_id)
-      .order("attempt_number", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    missionAttempt = attempt;
-
-    if (attempt?.offered_mission_ids?.length) {
-      const { data: missions } = await supabase
-        .from("station_missions")
-        .select("id, title, description, difficulty, success_reward")
-        .in("id", attempt.offered_mission_ids);
-      offeredMissions = (attempt.offered_mission_ids as string[])
+  }[] = missionAttemptRow?.offered_mission_ids?.length
+    ? (missionAttemptRow.offered_mission_ids as string[])
         .map((id: string) => {
           const m = missions?.find((x) => x.id === id);
           if (!m) return null;
@@ -179,49 +222,16 @@ export default async function TeamPage() {
             reward: m.success_reward ?? MISSION_DEFAULT_REWARD[difficulty],
           };
         })
-        .filter((m): m is NonNullable<typeof m> => !!m);
-    }
-  }
+        .filter((m): m is NonNullable<typeof m> => !!m)
+    : [];
 
-  let bonusMissionAttempt: { id: string; title: string | null; description: string | null; reward: number; status: string } | null = null;
-  if (state?.current_turn_id) {
-    const { data: bonusAttempt } = await supabase
-      .from("team_bonus_mission_attempts")
-      .select("id, title, description, reward, status")
-      .eq("team_id", actor.teamId)
-      .eq("turn_id", state.current_turn_id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    bonusMissionAttempt = bonusAttempt;
-  }
+  const ownedIds = new Set(((ownedRows ?? []) as { property_id: string }[]).map((r) => r.property_id));
+  const properties: { id: string; name: string; price: number; yield_amount: number; description: string }[] = (propertiesRaw ?? []).filter(
+    (p) => !ownedIds.has(p.id)
+  );
 
-  let properties: { id: string; name: string; price: number; yield_amount: number; description: string }[] = [];
-  if (state?.state === "PROPERTY_PURCHASE" && state.current_station_id) {
-    const [{ data }, { data: ownedRows }] = await Promise.all([
-      supabase
-        .from("station_properties")
-        .select("id, name, price, yield_amount, description")
-        .eq("station_id", state.current_station_id)
-        .eq("is_active", true),
-      supabase.rpc("fn_get_owned_property_ids"),
-    ]);
-    const ownedIds = new Set((ownedRows ?? []).map((r: { property_id: string }) => r.property_id));
-    properties = (data ?? []).filter((p) => !ownedIds.has(p.id));
-  }
-
-  const { data: myPropertyPurchases } = await supabase
-    .from("team_property_purchases")
-    .select("price_paid")
-    .eq("team_id", actor.teamId)
-    .eq("settled", false);
   const propertyAssetTotal = (myPropertyPurchases ?? []).reduce((sum, p) => sum + p.price_paid, 0);
 
-  const { data: myCardsRaw } = await supabase
-    .from("team_cards")
-    .select("card_id, quantity, card:card_id(card_code, name, category, rarity, description, effect_type, effect_value, target_type)")
-    .eq("team_id", actor.teamId)
-    .gt("quantity", 0);
   const myCards: OwnedCard[] = (myCardsRaw ?? [])
     .map((row) => {
       // @ts-expect-error 1:1リレーションが配列型で推論されるため
@@ -231,7 +241,6 @@ export default async function TeamPage() {
     })
     .filter((c): c is OwnedCard => !!c);
 
-  const { data: otherTeamsStatusRaw } = await supabase.rpc("fn_get_other_teams_status");
   const otherTeamsRaw = (
     (otherTeamsStatusRaw ?? []) as {
       team_id: string;
@@ -248,18 +257,6 @@ export default async function TeamPage() {
     station_name: t.station_name,
   }));
 
-  const { data: exchangeableCardsRaw } = await supabase
-    .from("cards")
-    .select("card_code, name, rarity")
-    .eq("enabled", true)
-    .eq("exchangeable", true)
-    .neq("card_code", "VOUCHER");
-
-  const { data: takeoverTargetsRaw } = await supabase
-    .from("team_property_purchases")
-    .select("id, team_id, price_paid, property:property_id(name), team:team_id(team_name)")
-    .neq("team_id", actor.teamId)
-    .eq("settled", false);
   const takeoverTargets = (takeoverTargetsRaw ?? []).map((t) => ({
     purchase_id: t.id,
     team_id: t.team_id,
@@ -270,19 +267,6 @@ export default async function TeamPage() {
     price_paid: t.price_paid,
   }));
 
-  const { data: notifications } = await supabase
-    .from("card_notifications")
-    .select("id, message, created_at")
-    .eq("team_id", actor.teamId)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  const { data: activeEffects } = await supabase
-    .from("card_active_effects")
-    .select("id, effect_type, payload")
-    .eq("team_id", actor.teamId)
-    .is("consumed_at", null);
-
   // 絶好調カード等、「通常サイコロ1個のリクエストをサーバー側で複数個に引き上げる」効果が
   // 有効な間は、演出開始時点でその個数を知っておかないと(振っている最中は1個表示のまま、
   // 着地の瞬間だけ複数個に変わって見える不具合になるため)クライアント側にも渡しておく。
@@ -290,7 +274,6 @@ export default async function TeamPage() {
   const hotStreakDiceCount = hotStreakEffect
     ? Number((hotStreakEffect.payload as { dice_count?: number } | null)?.dice_count ?? 2)
     : null;
-
 
   // eslint-disable-next-line react-hooks/purity -- Server Componentがリクエスト時点のサーバー時刻で判定するのは意図通り
   const nowMs = Date.now();
