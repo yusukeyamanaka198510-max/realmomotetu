@@ -14,6 +14,7 @@ export type RetrospectiveTeam = {
   representative_name: string | null;
   rank: number;
   coin_balance: number;
+  total_assets: number;
 };
 
 export type RetrospectiveEvent = {
@@ -165,7 +166,7 @@ function TeamResultHero({ team }: { team: RetrospectiveTeam }) {
       </GameText>
       <p className="mt-3 text-xs font-bold text-white/60">総資産額</p>
       <GameText as="p" variant="coin-positive" className="text-3xl sm:text-4xl">
-        {formatYen(team.coin_balance)}
+        {formatYen(team.total_assets)}
       </GameText>
     </div>
   );
@@ -239,7 +240,7 @@ export function RetrospectiveClient({
                 <span className={t.rank <= 3 ? "text-base" : "text-xs text-zinc-400"}>{RANK_MEDAL[t.rank] ?? `${t.rank}位`}</span>
                 <span>{t.team_name}</span>
               </span>
-              <span className="font-mono tabular-nums text-game-gold">{formatYen(t.coin_balance)}</span>
+              <span className="font-mono tabular-nums text-game-gold">{formatYen(t.total_assets)}</span>
             </li>
           ))}
         </ul>

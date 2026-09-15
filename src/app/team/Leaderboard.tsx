@@ -8,6 +8,7 @@ import { formatYen } from "@/lib/game/format";
 type LeaderboardRow = {
   rank: number;
   coin_balance_cache: number;
+  total_assets: number;
   team_name: string | null;
   station_name: string | null;
   has_bombii: boolean;
@@ -96,7 +97,7 @@ export function Leaderboard({ eventId }: { eventId: string }) {
     );
   }
 
-  const maxCoin = Math.max(1, ...rows.map((r) => r.coin_balance_cache));
+  const maxAssets = Math.max(1, ...rows.map((r) => r.total_assets));
 
   return (
     <div className="mt-6 space-y-4">
@@ -112,7 +113,7 @@ export function Leaderboard({ eventId }: { eventId: string }) {
         )}
         <ul className="space-y-1.5 text-sm">
           {rows.map((r, i) => {
-            const barPct = Math.max(4, Math.round((r.coin_balance_cache / maxCoin) * 100));
+            const barPct = Math.max(4, Math.round((r.total_assets / maxAssets) * 100));
             return (
               <li
                 key={r.is_mine ? "mine" : `other-${i}`}
@@ -144,7 +145,7 @@ export function Leaderboard({ eventId }: { eventId: string }) {
                       </span>
                     )}
                   </span>
-                  <span className="shrink-0 font-mono tabular-nums text-game-gold">{formatYen(r.coin_balance_cache)}</span>
+                  <span className="shrink-0 font-mono tabular-nums text-game-gold">{formatYen(r.total_assets)}</span>
                 </div>
               </li>
             );

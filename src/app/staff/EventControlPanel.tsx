@@ -40,7 +40,7 @@ export function EventControlPanel({
   startStationName,
 }: {
   event: EventInfo;
-  topTeams: { team_name: string; coin_balance_cache: number }[];
+  topTeams: { team_name: string; totalAssets: number }[];
   stations: { id: string; name: string }[];
   startStationName: string | null;
 }) {
@@ -445,13 +445,13 @@ export function EventControlPanel({
 
       {isEnded && topTeams.length === 1 && (
         <p className="mt-3 rounded bg-amber-100 p-3 text-sm font-semibold dark:bg-amber-900">
-          優勝: {topTeams[0].team_name}(所持コイン {topTeams[0].coin_balance_cache})
+          優勝: {topTeams[0].team_name}(総資産 {topTeams[0].totalAssets.toLocaleString()}円 ※現金+保有不動産)
         </p>
       )}
       {isEnded && topTeams.length > 1 && (
         <div className="mt-3 rounded bg-amber-100 p-3 text-sm font-semibold dark:bg-amber-900">
           <p>
-            同着1位({topTeams.length}チーム、所持コイン {topTeams[0].coin_balance_cache})— 本部判断で最終順位を決定してください
+            同着1位({topTeams.length}チーム、総資産 {topTeams[0].totalAssets.toLocaleString()}円 ※現金+保有不動産)— 本部判断で最終順位を決定してください
           </p>
           <ul className="mt-1 list-disc pl-5 font-normal">
             {topTeams.map((t) => (

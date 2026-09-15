@@ -148,6 +148,12 @@ export default async function StaffPage() {
     .from("team_cards")
     .select("team_id, quantity, card:card_id(card_code, name)")
     .gt("quantity", 0);
+  // ⑧ 順位・優勝判定がコイン残高だけで計算され、保有不動産の価値が一切反映されて
+  // いなかったため、物件に投資するほど順位が下がって見える不具合があった。
+  const { data: allPropertyPurchases } = await supabase
+    .from("team_property_purchases")
+    .select("team_id, price_paid")
+    .eq("settled", false);
   const { data: allActiveEffects } = await supabase
     .from("card_active_effects")
     .select("id, team_id, effect_type, remaining_uses, created_at, source_team_id")
@@ -187,12 +193,17 @@ export default async function StaffPage() {
     const updatedAgoMs = ts?.updated_at ? nowMsForStaff - new Date(ts.updated_at).getTime() : null;
     const pendingCount = pendingCountByTeam.get(t.id) ?? 0;
     const isStuck = !ts?.is_paused && updatedAgoMs !== null && updatedAgoMs > STUCK_THRESHOLD_MS && !["WAITING"].includes(ts?.state ?? "");
+    const coinBalance = ts?.coin_balance_cache ?? 0;
+    const propertyAssetTotal = (allPropertyPurchases ?? [])
+      .filter((p) => p.team_id === t.id)
+      .reduce((sum, p) => sum + p.price_paid, 0);
     return {
       id: t.id,
       team_name: t.team_name,
       representative_name: t.representative_name,
       state: ts?.state ?? "WAITING",
-      coin_balance_cache: ts?.coin_balance_cache ?? 0,
+      coin_balance_cache: coinBalance,
+      totalAssets: coinBalance + propertyAssetTotal,
       currentStationName: ts?.current_station?.name ?? "-",
       isPaused: ts?.is_paused ?? false,
       updatedAgoMinutes: updatedAgoMs !== null ? Math.floor(updatedAgoMs / 60000) : null,
@@ -205,8 +216,8 @@ export default async function StaffPage() {
       activeEffects: (allActiveEffects ?? []).filter((e) => e.team_id === t.id),
     };
   });
-  const maxCoin = teamRows.length ? Math.max(...teamRows.map((t) => t.coin_balance_cache)) : null;
-  const topTeams = maxCoin !== null ? teamRows.filter((t) => t.coin_balance_cache === maxCoin) : [];
+  const maxAssets = teamRows.length ? Math.max(...teamRows.map((t) => t.totalAssets)) : null;
+  const topTeams = maxAssets !== null ? teamRows.filter((t) => t.totalAssets === maxAssets) : [];
 
   const totalPending = pendingArrivals.length + pendingMissions.length + pendingBonusMissions.length + pendingStartCheckins.length;
 
