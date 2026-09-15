@@ -39,7 +39,9 @@ export function GoalBroadcastOverlay({ notifications }: { notifications: Notif[]
     <div
       role="status"
       onClick={() => setActive(null)}
-      className="fixed inset-0 z-[65] flex cursor-pointer flex-col items-center justify-center bg-black/70 px-6"
+      // ボンビー付与(z-[70])と同時に発生した場合でも、ゴール到着を先に見せたいため
+      // ボンビーより手前に表示する(自動で3.5秒後に消え、裏のボンビー演出が現れる)。
+      className="fixed inset-0 z-[71] flex cursor-pointer flex-col items-center justify-center bg-black/70 px-6"
     >
       <SparkleField />
       <ConfettiBurst />
