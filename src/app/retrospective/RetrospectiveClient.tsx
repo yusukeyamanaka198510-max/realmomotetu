@@ -19,7 +19,7 @@ export type RetrospectiveTeam = {
 
 export type RetrospectiveEvent = {
   at: string;
-  kind: "ARRIVAL" | "MISSION" | "BONUS_MISSION" | "DESTINATION_CLEAR" | "CARD_USE" | "COIN" | "STAFF_REJECT" | "BOMBII_ASSIGNED";
+  kind: "ARRIVAL" | "MISSION" | "BONUS_MISSION" | "DESTINATION_CLEAR" | "CARD_USE" | "CARD_USED_AGAINST" | "COIN" | "STAFF_REJECT" | "BOMBII_ASSIGNED";
   detail: Record<string, unknown>;
   photoUrls: string[];
 };
@@ -70,6 +70,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
         </span>
       );
       if (d.description) subBody = String(d.description);
+      if (!success && d.reason) subBody = `却下理由: ${String(d.reason)}`;
       break;
     }
     case "BONUS_MISSION": {
@@ -102,6 +103,15 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
         <span>
           カード「{String(d.card_name ?? "-")}」を使用
           {d.target_team_name ? <span className="text-zinc-500">(対象: {String(d.target_team_name)})</span> : null}
+        </span>
+      );
+      break;
+    case "CARD_USED_AGAINST":
+      icon = "🎯";
+      body = (
+        <span>
+          {String(d.used_by_team_name ?? "-")}から「{String(d.card_name ?? "-")}」を使われた
+          {d.result === "BLOCKED_BY_BARRIER" && <span className="text-zinc-500">(カードバリアで防いだ)</span>}
         </span>
       );
       break;
