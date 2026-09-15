@@ -53,7 +53,7 @@ export default async function TeamPage() {
     supabase
       .from("team_state")
       .select(
-        "state, coin_balance_cache, mission_success_count, current_turn_id, current_station_id, current_station:current_station_id(name), has_bombii, selected_start_station_id"
+        "state, coin_balance_cache, mission_success_count, current_turn_id, current_station_id, current_station:current_station_id(name), has_bombii, selected_start_station_id, dice_switch_pending"
       )
       .eq("team_id", actor.teamId)
       .single(),
@@ -342,6 +342,7 @@ export default async function TeamPage() {
           properties={properties}
           isEventOver={isEventOver}
           isEventScheduled={isEventScheduled}
+          diceSwitchPending={state?.dice_switch_pending ?? false}
         />
 
         {!isEventOver && <BonusMissionPanel teamId={actor.teamId} eventId={actor.eventId} attempt={bonusMissionAttempt} />}

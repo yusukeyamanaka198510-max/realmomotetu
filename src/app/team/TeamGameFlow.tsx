@@ -47,6 +47,7 @@ export function TeamGameFlow({
   coinBalance,
   isEventOver,
   isEventScheduled,
+  diceSwitchPending,
 }: {
   teamId: string;
   eventId: string;
@@ -62,6 +63,7 @@ export function TeamGameFlow({
   properties: Property[];
   isEventOver: boolean;
   isEventScheduled: boolean;
+  diceSwitchPending: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -755,13 +757,28 @@ export function TeamGameFlow({
               {canStopDice ? "⏹ 止める" : "🎲 振っています…"}
             </GameButton>
           )}
+          {dicePhase === "rolling" && canStopDice && diceResult && !diceResult.isCardMove && (
+            <button
+              onClick={handleCancelDiceForCard}
+              disabled={busy}
+              className="w-full text-center text-xs text-zinc-400 underline hover:text-zinc-600 disabled:opacity-50 dark:hover:text-zinc-300"
+            >
+              出目を見ずに、カードでの移動に切り替える
+            </button>
+          )}
         </div>
       )}
 
       {initialState === "DICE_READY" && dicePhase === null && (
-        <GameButton onClick={handleRollDice} variant="dice" size="lg" className="w-full">
-          🎲 サイコロを振る
-        </GameButton>
+        diceSwitchPending ? (
+          <p className="rounded-xl border-2 border-dashed border-zinc-300 p-3 text-center text-sm font-bold text-zinc-500 dark:border-zinc-700">
+            カードでの移動に切り替え済みです。下のカード一覧から移動カードを使ってください(サイコロは使えません)。
+          </p>
+        ) : (
+          <GameButton onClick={handleRollDice} variant="dice" size="lg" className="w-full">
+            🎲 サイコロを振る
+          </GameButton>
+        )
       )}
 
       {initialState === "DESTINATION_SELECTION" && dicePhase === "revealed" && (
@@ -772,15 +789,6 @@ export function TeamGameFlow({
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             移動先を選んでください({reachableStations.length}駅から選択可能)
           </p>
-          {diceResult && !diceResult.isCardMove && (
-            <button
-              onClick={handleCancelDiceForCard}
-              disabled={busy}
-              className="text-xs text-zinc-400 underline hover:text-zinc-600 disabled:opacity-50 dark:hover:text-zinc-300"
-            >
-              この出目を使わず、カードで移動する
-            </button>
-          )}
           {reachableStations.length === 0 && (
             <p className="text-sm text-red-600">到達可能な駅がありません。本部にお問い合わせください。</p>
           )}
