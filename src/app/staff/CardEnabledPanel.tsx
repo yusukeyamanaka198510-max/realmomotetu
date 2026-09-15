@@ -26,17 +26,24 @@ export function CardEnabledPanel({ cards }: { cards: Card[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // サーバーからの新しいpropsが反映されるまで(router.refresh()の完了を待つ間)、
+  // チェックの見た目がクリックに追従せず「外せない」ように見えていたため、
+  // クリック直後にこの端末側の見た目だけ即座に反映させる。
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
 
   async function handleToggle(card: Card) {
     setError(null);
     setPendingId(card.id);
+    const nextEnabled = !(overrides[card.id] ?? card.enabled);
+    setOverrides((prev) => ({ ...prev, [card.id]: nextEnabled }));
     const supabase = createClient();
     const { error } = await supabase.rpc("fn_admin_set_card_enabled", {
       p_card_id: card.id,
-      p_enabled: !card.enabled,
+      p_enabled: nextEnabled,
     });
     setPendingId(null);
     if (error) {
+      setOverrides((prev) => ({ ...prev, [card.id]: card.enabled }));
       setError(error.message);
       return;
     }
@@ -44,7 +51,7 @@ export function CardEnabledPanel({ cards }: { cards: Card[] }) {
   }
 
   const grouped = cards.reduce<Record<string, Card[]>>((acc, c) => {
-    (acc[c.category] ??= []).push(c);
+    (acc[c.category] ??= []).push({ ...c, enabled: overrides[c.id] ?? c.enabled });
     return acc;
   }, {});
 
