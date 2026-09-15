@@ -133,7 +133,7 @@ export default async function TeamPage() {
     needsDiceRoll
       ? supabase
           .from("dice_rolls")
-          .select("id, total, individual_results")
+          .select("id, total, individual_results, used_card_id")
           .eq("turn_id", state!.current_turn_id as string)
           .eq("is_valid", true)
           .order("rolled_at", { ascending: false })
@@ -194,8 +194,8 @@ export default async function TeamPage() {
       : NULL_RESULT,
   ]);
 
-  const diceResult: { total: number; individual_results: number[] } | null = diceRoll
-    ? { total: diceRoll.total, individual_results: diceRoll.individual_results as number[] }
+  const diceResult: { total: number; individual_results: number[]; isCardMove: boolean } | null = diceRoll
+    ? { total: diceRoll.total, individual_results: diceRoll.individual_results as number[], isCardMove: diceRoll.used_card_id !== null }
     : null;
   const reachableStations: { id: string; name: string }[] = (snapshot ?? [])
     .map((s) => s.station as unknown as { id: string; name: string } | null)

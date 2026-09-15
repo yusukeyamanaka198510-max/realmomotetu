@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { TeamGameState } from "@/lib/game/types";
 import type { DicePhase } from "./DiceAnimation";
 
-type DiceResult = { total: number; individual_results: number[] };
+type DiceResult = { total: number; individual_results: number[]; isCardMove: boolean };
 
 type DiceCardValue = {
   dicePhase: DicePhase | null;

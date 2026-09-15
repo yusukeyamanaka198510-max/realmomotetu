@@ -20,7 +20,7 @@ type MissionAttempt = {
 type MissionDifficulty = "EASY" | "NORMAL" | "HARD";
 type OfferedMission = { id: string; title: string; description: string; difficulty: MissionDifficulty; reward: number };
 
-type DiceResult = { total: number; individual_results: number[] };
+type DiceResult = { total: number; individual_results: number[]; isCardMove: boolean };
 type ReachableStation = { id: string; name: string };
 type Property = { id: string; name: string; price: number; yield_amount: number; description: string };
 type ClaimRewardResult = {
@@ -182,6 +182,20 @@ export function TeamGameFlow({
     setError(null);
     const supabase = createClient();
     const { error } = await supabase.rpc("fn_select_destination", { p_station_id: stationId });
+    setBusy(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    router.refresh();
+  }
+
+  async function handleCancelDiceForCard() {
+    if (!window.confirm("今振った出目を取り消して、カードで移動しますか?")) return;
+    setBusy(true);
+    setError(null);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("fn_team_cancel_dice_for_card");
     setBusy(false);
     if (error) {
       setError(error.message);
@@ -752,10 +766,21 @@ export function TeamGameFlow({
 
       {initialState === "DESTINATION_SELECTION" && dicePhase === "revealed" && (
         <div className="space-y-3">
-          {diceResult && <DiceAnimation phase="revealed" values={diceResult.individual_results} />}
+          {diceResult && diceResult.individual_results.length > 0 && (
+            <DiceAnimation phase="revealed" values={diceResult.individual_results} />
+          )}
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             移動先を選んでください({reachableStations.length}駅から選択可能)
           </p>
+          {diceResult && !diceResult.isCardMove && (
+            <button
+              onClick={handleCancelDiceForCard}
+              disabled={busy}
+              className="text-xs text-zinc-400 underline hover:text-zinc-600 disabled:opacity-50 dark:hover:text-zinc-300"
+            >
+              この出目を使わず、カードで移動する
+            </button>
+          )}
           {reachableStations.length === 0 && (
             <p className="text-sm text-red-600">到達可能な駅がありません。本部にお問い合わせください。</p>
           )}
