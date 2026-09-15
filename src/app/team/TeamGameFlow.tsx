@@ -70,6 +70,7 @@ export function TeamGameFlow({
   const [missionFiles, setMissionFiles] = useState<File[]>([]);
   const [startCheckinFiles, setStartCheckinFiles] = useState<File[]>([]);
   const [stationQuery, setStationQuery] = useState("");
+  const [purchasedThisVisit, setPurchasedThisVisit] = useState(false);
   const { dicePhase, canStopDice, rollingDiceCount, rollPlainDice, stopDice, diceLanded } = useDiceCard();
   // 振り始めた直後はサーバーの本当の出目(diceResult)がまだ届いていないことがあるため、
   // 個数だけ先に確定させたrollingDiceCount分のダミー配列で個数のズレを防ぐ。
@@ -287,6 +288,7 @@ export function TeamGameFlow({
       setError(error.message);
       return;
     }
+    setPurchasedThisVisit(true);
     router.refresh();
   }
 
@@ -710,7 +712,7 @@ export function TeamGameFlow({
             disabled={busy}
             className="w-full rounded border border-zinc-300 py-2 text-sm font-medium disabled:opacity-50 dark:border-zinc-700"
           >
-            購入せず次へ進む
+            {purchasedThisVisit ? "次へ進む" : "購入せず次へ進む"}
           </button>
         </div>
       )}
