@@ -51,13 +51,20 @@ export class GoogleAuthManager {
 
       const { tokens } = await client.getToken(code)
       client.setCredentials(tokens)
-
-      const oauth2 = google.oauth2({ auth: client, version: 'v2' })
-      const userInfo = await oauth2.userinfo.get()
-      const email = userInfo.data.email ?? undefined
-
       this.store.set('tokens', tokens)
-      if (email) this.store.set('email', email)
+
+      // The email is only used for display ("signed in as ...") -- Drive
+      // access itself only needs the drive.readonly scope above, so a
+      // failure here (e.g. a future scope change) must never fail sign-in.
+      let email: string | undefined
+      try {
+        const oauth2 = google.oauth2({ auth: client, version: 'v2' })
+        const userInfo = await oauth2.userinfo.get()
+        email = userInfo.data.email ?? undefined
+        if (email) this.store.set('email', email)
+      } catch {
+        // ignore -- sign-in still succeeded
+      }
 
       return { authenticated: true, email }
     } finally {
