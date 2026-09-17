@@ -1,0 +1,24 @@
+appId: com.realmomotetu.slideshow
+productName: SlideshowMaker
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+extraResources:
+  - from: python
+    to: python
+    filter:
+      - '**/*'
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: ${productName}-${version}-setup.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+asarUnpack:
+  - '**/*.node'
