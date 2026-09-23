@@ -22,159 +22,158 @@ export default async function StaffPage() {
 
   const supabase = await createClient();
 
-  const { data: event } = await supabase
-    .from("events")
-    .select(
-      "id, name, status, start_at, end_at, time_limit_minutes, default_destination_bonus_amount, leaderboard_hide_minutes_before_end, obstruction_cooldown_seconds, active_destination_station_id, active_destination:active_destination_station_id(name), dividend_interval_minutes, dividend_scheduled_times, last_dividend_run_at, scheduled_start_at, auto_start_enabled, auto_start_time_limit_minutes, auto_start_end_at, leaderboard_snapshot_interval_minutes, last_leaderboard_snapshot_at, start_station_id, start_station:start_station_id(name), min_destination_distance_hops"
-    )
-    .eq("id", actor.eventId)
-    .single();
+  // 以前は15件以上のクエリを1つずつawaitしており、ダッシュボード自体の表示・他ページへの
+  // 遷移前のレンダリングが毎回待たされる原因になっていた。互いに依存しないものは並列化する。
+  const [
+    { data: event },
+    { data: teams },
+    { data: stations },
+    { data: connectedStations },
+    { data: destinationHistory },
+    { data: queueRows },
+    { data: startCheckinQueueRows },
+    { data: missionQueueRows },
+    { data: bonusMissionQueueRows },
+    { data: allCards },
+    { data: allTeamCards },
+    { data: allPropertyPurchases },
+    { data: allActiveEffects },
+    { data: recentUsageLog },
+    { data: recentLedger },
+  ] = await Promise.all([
+    supabase
+      .from("events")
+      .select(
+        "id, name, status, start_at, end_at, time_limit_minutes, default_destination_bonus_amount, leaderboard_hide_minutes_before_end, obstruction_cooldown_seconds, active_destination_station_id, active_destination:active_destination_station_id(name), dividend_interval_minutes, dividend_scheduled_times, last_dividend_run_at, scheduled_start_at, auto_start_enabled, auto_start_time_limit_minutes, auto_start_end_at, leaderboard_snapshot_interval_minutes, last_leaderboard_snapshot_at, start_station_id, start_station:start_station_id(name), min_destination_distance_hops"
+      )
+      .eq("id", actor.eventId)
+      .single(),
+    supabase
+      .from("teams")
+      .select(
+        "id, team_number, team_name, representative_name, team_state(state, current_station_id, coin_balance_cache, is_paused, updated_at, current_station:current_station_id(name))"
+      )
+      .eq("event_id", actor.eventId)
+      .order("team_number"),
+    supabase.from("stations").select("id, name, is_destination_candidate").eq("event_id", actor.eventId).order("name"),
+    // 有効な接続(edge)を1本も持たない孤立駅を、現在駅/次駅の手動補正・デフォルトスタート駅・
+    // ゴール手動設定の各プルダウンから除外する(選ぶと即詰みになるため)。
+    supabase.rpc("fn_list_connected_stations"),
+    supabase
+      .from("destination_queue")
+      .select("id, sequence_order, bonus_coin_amount, cleared_at, station:station_id(name), team:cleared_by_team_id(team_name)")
+      .eq("event_id", actor.eventId)
+      .eq("status", "CLEARED")
+      .order("sequence_order", { ascending: false }),
+    supabase
+      .from("review_queue")
+      .select("id, ref_id, team_id, created_at, teams:team_id(team_name)")
+      .eq("event_id", actor.eventId)
+      .eq("type", "ARRIVAL")
+      .eq("status", "OPEN")
+      .order("created_at"),
+    supabase
+      .from("review_queue")
+      .select("id, ref_id, team_id, created_at, teams:team_id(team_name)")
+      .eq("event_id", actor.eventId)
+      .eq("type", "START_CHECKIN")
+      .eq("status", "OPEN")
+      .order("created_at"),
+    supabase
+      .from("review_queue")
+      .select("id, ref_id, team_id, created_at, teams:team_id(team_name)")
+      .eq("event_id", actor.eventId)
+      .eq("type", "MISSION")
+      .eq("status", "OPEN")
+      .order("created_at"),
+    supabase
+      .from("review_queue")
+      .select("id, ref_id, team_id, created_at, teams:team_id(team_name)")
+      .eq("event_id", actor.eventId)
+      .eq("type", "BONUS_MISSION")
+      .eq("status", "OPEN")
+      .order("created_at"),
+    supabase.from("cards").select("id, card_code, name, category, rarity, enabled").order("category").order("rarity"),
+    supabase.from("team_cards").select("team_id, quantity, card:card_id(card_code, name)").gt("quantity", 0),
+    // ⑧ 順位・優勝判定がコイン残高だけで計算され、保有不動産の価値が一切反映されて
+    // いなかったため、物件に投資するほど順位が下がって見える不具合があった。
+    supabase.from("team_property_purchases").select("team_id, price_paid").eq("settled", false),
+    supabase
+      .from("card_active_effects")
+      .select("id, team_id, effect_type, remaining_uses, created_at, source_team_id")
+      .eq("event_id", actor.eventId)
+      .is("consumed_at", null)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("card_usage_log")
+      .select("id, used_at, result, announced_at, card:card_id(name), team:team_id(team_name), target_team:target_team_id(team_name)")
+      .eq("event_id", actor.eventId)
+      .is("hidden_from_log_at", null)
+      .order("used_at", { ascending: false })
+      .limit(30),
+    supabase
+      .from("coin_ledger")
+      .select("id, amount, transaction_type, reason, created_at, announced_at, team:team_id(team_name)")
+      .eq("event_id", actor.eventId)
+      .is("hidden_from_log_at", null)
+      .order("created_at", { ascending: false })
+      .limit(40),
+  ]);
 
-  const { data: teams } = await supabase
-    .from("teams")
-    .select(
-      "id, team_number, team_name, representative_name, team_state(state, current_station_id, coin_balance_cache, is_paused, updated_at, current_station:current_station_id(name))"
-    )
-    .eq("event_id", actor.eventId)
-    .order("team_number");
-
-  const { data: stations } = await supabase
-    .from("stations")
-    .select("id, name, is_destination_candidate")
-    .eq("event_id", actor.eventId)
-    .order("name");
-
-  // 有効な接続(edge)を1本も持たない孤立駅を、現在駅/次駅の手動補正・デフォルトスタート駅・
-  // ゴール手動設定の各プルダウンから除外する(選ぶと即詰みになるため)。
-  const { data: connectedStations } = await supabase.rpc("fn_list_connected_stations");
   const connectedStationIds = new Set((connectedStations ?? []).map((s: { id: string }) => s.id));
   const reachableStations = (stations ?? []).filter((s) => connectedStationIds.has(s.id));
 
-  const { data: destinationHistory } = await supabase
-    .from("destination_queue")
-    .select("id, sequence_order, bonus_coin_amount, cleared_at, station:station_id(name), team:cleared_by_team_id(team_name)")
-    .eq("event_id", actor.eventId)
-    .eq("status", "CLEARED")
-    .order("sequence_order", { ascending: false });
-
-  const { data: queueRows } = await supabase
-    .from("review_queue")
-    .select("id, ref_id, team_id, created_at, teams:team_id(team_name)")
-    .eq("event_id", actor.eventId)
-    .eq("type", "ARRIVAL")
-    .eq("status", "OPEN")
-    .order("created_at");
-
   const refIds = (queueRows ?? []).map((r) => r.ref_id);
-  const { data: arrivalRows } = refIds.length
-    ? await supabase
-        .from("arrival_submissions")
-        .select("id, submitted_at, station:station_id(name), arrival_photos(id, storage_path)")
-        .in("id", refIds)
-    : { data: [] };
+  const startCheckinRefIds = (startCheckinQueueRows ?? []).map((r) => r.ref_id);
+  const missionRefIds = (missionQueueRows ?? []).map((r) => r.ref_id);
+  const bonusMissionRefIds = (bonusMissionQueueRows ?? []).map((r) => r.ref_id);
+
+  const [{ data: arrivalRows }, { data: startCheckinRows }, { data: missionAttemptRows }, { data: bonusMissionAttemptRows }] =
+    await Promise.all([
+      refIds.length
+        ? supabase
+            .from("arrival_submissions")
+            .select("id, submitted_at, station:station_id(name), arrival_photos(id, storage_path)")
+            .in("id", refIds)
+        : Promise.resolve({ data: [] as { id: string }[] }),
+      startCheckinRefIds.length
+        ? supabase
+            .from("team_start_checkins")
+            .select("id, submitted_at, station:station_id(name), start_checkin_photos(id, storage_path)")
+            .in("id", startCheckinRefIds)
+        : Promise.resolve({ data: [] as { id: string }[] }),
+      missionRefIds.length
+        ? supabase
+            .from("team_mission_attempts")
+            .select(
+              "id, attempt_number, selected_mission_id, mission:selected_mission_id(title, description), mission_photos(id, storage_path)"
+            )
+            .in("id", missionRefIds)
+        : Promise.resolve({ data: [] as { id: string }[] }),
+      bonusMissionRefIds.length
+        ? supabase
+            .from("team_bonus_mission_attempts")
+            .select("id, reward, title, description, bonus_mission_photos(id, storage_path)")
+            .in("id", bonusMissionRefIds)
+        : Promise.resolve({ data: [] as { id: string }[] }),
+    ]);
 
   const pendingArrivals = (queueRows ?? []).map((r) => ({
     ...r,
     arrival_submissions: arrivalRows?.find((a) => a.id === r.ref_id) ?? null,
   }));
-
-  const { data: startCheckinQueueRows } = await supabase
-    .from("review_queue")
-    .select("id, ref_id, team_id, created_at, teams:team_id(team_name)")
-    .eq("event_id", actor.eventId)
-    .eq("type", "START_CHECKIN")
-    .eq("status", "OPEN")
-    .order("created_at");
-
-  const startCheckinRefIds = (startCheckinQueueRows ?? []).map((r) => r.ref_id);
-  const { data: startCheckinRows } = startCheckinRefIds.length
-    ? await supabase
-        .from("team_start_checkins")
-        .select("id, submitted_at, station:station_id(name), start_checkin_photos(id, storage_path)")
-        .in("id", startCheckinRefIds)
-    : { data: [] };
-
   const pendingStartCheckins = (startCheckinQueueRows ?? []).map((r) => ({
     ...r,
     team_start_checkins: startCheckinRows?.find((c) => c.id === r.ref_id) ?? null,
   }));
-
-  const { data: missionQueueRows } = await supabase
-    .from("review_queue")
-    .select("id, ref_id, team_id, created_at, teams:team_id(team_name)")
-    .eq("event_id", actor.eventId)
-    .eq("type", "MISSION")
-    .eq("status", "OPEN")
-    .order("created_at");
-
-  const missionRefIds = (missionQueueRows ?? []).map((r) => r.ref_id);
-  const { data: missionAttemptRows } = missionRefIds.length
-    ? await supabase
-        .from("team_mission_attempts")
-        .select(
-          "id, attempt_number, selected_mission_id, mission:selected_mission_id(title, description), mission_photos(id, storage_path)"
-        )
-        .in("id", missionRefIds)
-    : { data: [] };
-
   const pendingMissions = (missionQueueRows ?? []).map((r) => ({
     ...r,
     team_mission_attempts: missionAttemptRows?.find((a) => a.id === r.ref_id) ?? null,
   }));
-
-  const { data: bonusMissionQueueRows } = await supabase
-    .from("review_queue")
-    .select("id, ref_id, team_id, created_at, teams:team_id(team_name)")
-    .eq("event_id", actor.eventId)
-    .eq("type", "BONUS_MISSION")
-    .eq("status", "OPEN")
-    .order("created_at");
-
-  const bonusMissionRefIds = (bonusMissionQueueRows ?? []).map((r) => r.ref_id);
-  const { data: bonusMissionAttemptRows } = bonusMissionRefIds.length
-    ? await supabase
-        .from("team_bonus_mission_attempts")
-        .select("id, reward, title, description, bonus_mission_photos(id, storage_path)")
-        .in("id", bonusMissionRefIds)
-    : { data: [] };
-
   const pendingBonusMissions = (bonusMissionQueueRows ?? []).map((r) => ({
     ...r,
     team_bonus_mission_attempts: bonusMissionAttemptRows?.find((a) => a.id === r.ref_id) ?? null,
   }));
-
-  const { data: allCards } = await supabase.from("cards").select("id, card_code, name, category, rarity, enabled").order("category").order("rarity");
-  const { data: allTeamCards } = await supabase
-    .from("team_cards")
-    .select("team_id, quantity, card:card_id(card_code, name)")
-    .gt("quantity", 0);
-  // ⑧ 順位・優勝判定がコイン残高だけで計算され、保有不動産の価値が一切反映されて
-  // いなかったため、物件に投資するほど順位が下がって見える不具合があった。
-  const { data: allPropertyPurchases } = await supabase
-    .from("team_property_purchases")
-    .select("team_id, price_paid")
-    .eq("settled", false);
-  const { data: allActiveEffects } = await supabase
-    .from("card_active_effects")
-    .select("id, team_id, effect_type, remaining_uses, created_at, source_team_id")
-    .eq("event_id", actor.eventId)
-    .is("consumed_at", null)
-    .order("created_at", { ascending: false });
-  const { data: recentUsageLog } = await supabase
-    .from("card_usage_log")
-    .select("id, used_at, result, announced_at, card:card_id(name), team:team_id(team_name), target_team:target_team_id(team_name)")
-    .eq("event_id", actor.eventId)
-    .is("hidden_from_log_at", null)
-    .order("used_at", { ascending: false })
-    .limit(30);
-
-  const { data: recentLedger } = await supabase
-    .from("coin_ledger")
-    .select("id, amount, transaction_type, reason, created_at, announced_at, team:team_id(team_name)")
-    .eq("event_id", actor.eventId)
-    .is("hidden_from_log_at", null)
-    .order("created_at", { ascending: false })
-    .limit(40);
 
   const pendingCountByTeam = new Map<string, number>();
   for (const r of [...(queueRows ?? []), ...(missionQueueRows ?? []), ...(bonusMissionQueueRows ?? []), ...(startCheckinQueueRows ?? [])]) {

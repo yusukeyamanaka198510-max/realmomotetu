@@ -19,30 +19,39 @@ export type RetrospectiveTeam = {
 
 export type RetrospectiveEvent = {
   at: string;
-  kind: "ARRIVAL" | "MISSION" | "BONUS_MISSION" | "DESTINATION_CLEAR" | "CARD_USE" | "CARD_USED_AGAINST" | "COIN" | "STAFF_REJECT" | "BOMBII_ASSIGNED";
+  kind:
+    | "ARRIVAL"
+    | "MISSION"
+    | "BONUS_MISSION"
+    | "DESTINATION_CLEAR"
+    | "CARD_USE"
+    | "CARD_USED_AGAINST"
+    | "PROPERTY_PURCHASE"
+    | "COIN"
+    | "STAFF_REJECT"
+    | "BOMBII_ASSIGNED";
   detail: Record<string, unknown>;
-  photoUrls: string[];
 };
 
 const RANK_MEDAL: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
 const DIFFICULTY_LABEL: Record<string, string> = { EASY: "かんたん", NORMAL: "ふつう", HARD: "むずかしい" };
 
+// 妨害カードを使われた際に、具体的に何が出来なくなるか(振り返り画面での表示用)。
+const CARD_EFFECT_RESTRICTION_LABEL: Record<string, string> = {
+  SWAP_LOCATION: "現在地を交換させられた",
+  FORCE_NEXT_MOVE_FIXED_1: "次回の移動が1駅固定にされた",
+  BLOCK_NEXT_MOVEMENT_CARD: "次回移動時、移動系カードが使えなくなった",
+  BLOCK_UNTIL_MISSION_SUCCESS: "ミッションに成功するまで移動できなくなった",
+  PUSH_BACK_SAME_STATION_TEAMS: "目的地から遠ざかる方向へ移動させられた",
+  BLOCK_NEXT_CARD_USE: "次回のカード使用権を失った",
+  STEAL_RANDOM_CARD: "所持カードを1枚奪われた",
+  DESTROY_RANDOM_CARD: "所持カードを1枚破棄された",
+  STEAL_COIN_PERCENT: "所持コインの一部を奪われた",
+  BOMBII_TRANSFER: "ボンビーを押し付けられた",
+};
+
 function timeLabel(at: string) {
   return new Date(at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
-function PhotoGallery({ urls }: { urls: string[] }) {
-  if (urls.length === 0) return null;
-  return (
-    <div className="mt-3 flex flex-wrap gap-3">
-      {urls.map((url, i) => (
-        <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
-          {/* eslint-disable-next-line @next/next/no-img-element -- 署名付きURL(一時的)のためnext/imageの最適化キャッシュ対象に向かない */}
-          <img src={url} alt="" className="h-96 w-96 rounded-xl border-4 border-white object-cover shadow-lg dark:border-zinc-700" />
-        </a>
-      ))}
-    </div>
-  );
 }
 
 function EventRow({ event }: { event: RetrospectiveEvent }) {
@@ -112,14 +121,39 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
         </span>
       );
       break;
-    case "CARD_USED_AGAINST":
+    case "CARD_USED_AGAINST": {
       icon = "🎯";
+      const blocked = d.result === "BLOCKED_BY_BARRIER";
       body = (
         <span>
           {String(d.used_by_team_name ?? "-")}から「{String(d.card_name ?? "-")}」を使われた
-          {d.result === "BLOCKED_BY_BARRIER" && <span className="text-zinc-500">(カードバリアで防いだ)</span>}
+          {blocked && <span className="text-zinc-500">(カードバリアで防いだ)</span>}
         </span>
       );
+      if (!blocked) {
+        const restriction = CARD_EFFECT_RESTRICTION_LABEL[String(d.effect_type ?? "")];
+        if (restriction) {
+          subBody = restriction;
+          subBodyIsWarning = true;
+        }
+      }
+      break;
+    }
+    case "PROPERTY_PURCHASE":
+      icon = "🏠";
+      body = (
+        <span>
+          物件「{String(d.property_name ?? "-")}」
+          {d.station_name ? <span className="text-zinc-500">({String(d.station_name)})</span> : null}
+          を購入
+          {typeof d.price === "number" && (
+            <span className="ml-2 font-mono text-4xl font-black text-red-600">-{formatYen(d.price)}</span>
+          )}
+        </span>
+      );
+      if (typeof d.yield_amount === "number") {
+        subBody = `利回り: 精算時に ${formatYen(d.yield_amount)} 上乗せ`;
+      }
       break;
     case "COIN": {
       const type = d.transaction_type as CoinTransactionType;
@@ -169,7 +203,6 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
               {subBody}
             </p>
           )}
-          <PhotoGallery urls={event.photoUrls} />
         </div>
       </div>
     </li>
@@ -252,7 +285,7 @@ export function RetrospectiveClient({
         📖 振り返り
       </GameText>
 
-      <GamePanel title="現在の順位" icon="🏆" accent="gold" collapsible defaultOpen>
+      <GamePanel title="現在の順位" icon="🏆" accent="gold" collapsible defaultOpen={false}>
         <ul className="grid grid-cols-1 gap-2 text-xl sm:grid-cols-2 lg:grid-cols-3">
           {teams.map((t) => (
             <li key={t.team_id} className="flex items-center justify-between gap-3 rounded-xl bg-zinc-50 px-4 py-3 dark:bg-zinc-800/60">
