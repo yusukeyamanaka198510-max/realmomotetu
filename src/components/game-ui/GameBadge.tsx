@@ -11,8 +11,15 @@ const TONE_CLASS: Record<GameBadgeTone, string> = {
   navy: "bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200",
 };
 
-export function GameBadge({ tone = "navy", children }: { tone?: GameBadgeTone; children: ReactNode }) {
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${TONE_CLASS[tone]}`}>{children}</span>
-  );
+export function GameBadge({
+  tone = "navy",
+  size = "sm",
+  children,
+}: {
+  tone?: GameBadgeTone;
+  size?: "sm" | "lg";
+  children: ReactNode;
+}) {
+  const sizeClass = size === "lg" ? "px-4 py-1.5 text-xl" : "px-2.5 py-1 text-xs";
+  return <span className={`inline-flex items-center gap-1 rounded-full font-bold ${sizeClass} ${TONE_CLASS[tone]}`}>{children}</span>;
 }
