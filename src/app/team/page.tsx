@@ -19,6 +19,7 @@ import { LuckyChanceOverlay } from "./LuckyChanceOverlay";
 import { EventStartOverlay } from "./EventStartOverlay";
 import { RejectionOverlay } from "./RejectionOverlay";
 import { CardBarrierOverlay } from "./CardBarrierOverlay";
+import { CardAttackOverlay } from "./CardAttackOverlay";
 import { AnnouncementBox } from "./AnnouncementBox";
 import { GameStartIntro } from "./GameStartIntro";
 import { ScheduledStartCountdown } from "./ScheduledStartCountdown";
@@ -325,6 +326,7 @@ export default async function TeamPage() {
       <EventStartOverlay notifications={notifications ?? []} />
       <RejectionOverlay notifications={notifications ?? []} />
       <CardBarrierOverlay notifications={notifications ?? []} />
+      <CardAttackOverlay notifications={notifications ?? []} />
 
       <DiceCardProvider
         initialState={(state?.state ?? "WAITING") as TeamGameState}
