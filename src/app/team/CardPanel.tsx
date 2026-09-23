@@ -75,8 +75,10 @@ function isLikelyUsable(card: OwnedCard, state: TeamGameState): { ok: boolean; r
       if (state !== "MISSION_ACTIVE") return { ok: false, reason: "ミッション失敗直後のみ使用できます" };
       return { ok: true };
     case "MISSION_REROLL_OFFERED":
-    case "GRANT_BONUS_MISSION":
       if (state !== "MISSION_SELECTION") return { ok: false, reason: "ミッション選択中のみ使用できます" };
+      return { ok: true };
+    case "GRANT_BONUS_MISSION":
+      if (!["MISSION_SELECTION", "MISSION_ACTIVE"].includes(state)) return { ok: false, reason: "ミッション中ではありません" };
       return { ok: true };
     case "PROPERTY_HALF_PRICE":
       if (state !== "PROPERTY_PURCHASE") return { ok: false, reason: "物件購入中のみ使用できます" };
