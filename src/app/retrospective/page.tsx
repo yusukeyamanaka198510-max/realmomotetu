@@ -2,8 +2,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getActor } from "@/lib/game/actor";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { EVIDENCE_BUCKET } from "@/lib/game/storage";
 import { RetrospectiveClient, type RetrospectiveEvent, type RetrospectiveTeam } from "./RetrospectiveClient";
 
 type RawEvent = {
@@ -11,7 +9,6 @@ type RawEvent = {
   at: string;
   kind: RetrospectiveEvent["kind"];
   detail: Record<string, unknown>;
-  photos: string[];
 };
 
 export default async function RetrospectivePage() {
@@ -32,25 +29,11 @@ export default async function RetrospectivePage() {
   const teams = ((data?.teams ?? []) as RetrospectiveTeam[]).slice();
   const rawEvents = (data?.events ?? []) as RawEvent[];
 
-  const allPaths = Array.from(new Set(rawEvents.flatMap((e) => e.photos ?? [])));
-  const signedUrlByPath = new Map<string, string>();
-  if (allPaths.length > 0) {
-    const admin = createAdminClient();
-    const { data: signed } = await admin.storage.from(EVIDENCE_BUCKET).createSignedUrls(allPaths, 3600);
-    for (const s of signed ?? []) {
-      if (s.path && s.signedUrl) signedUrlByPath.set(s.path, s.signedUrl);
-    }
-  }
-
+  // どのチームの出来事かをその場で当てるコーナーのため、写真は表示しない(顔写真等で先にバレてしまう)。
   const eventsByTeam = new Map<string, RetrospectiveEvent[]>();
   for (const e of rawEvents) {
     const list = eventsByTeam.get(e.team_id) ?? [];
-    list.push({
-      at: e.at,
-      kind: e.kind,
-      detail: e.detail,
-      photoUrls: (e.photos ?? []).map((p) => signedUrlByPath.get(p)).filter((u): u is string => !!u),
-    });
+    list.push({ at: e.at, kind: e.kind, detail: e.detail });
     eventsByTeam.set(e.team_id, list);
   }
 
