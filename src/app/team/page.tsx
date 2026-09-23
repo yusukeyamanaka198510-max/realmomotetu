@@ -68,11 +68,7 @@ export default async function TeamPage() {
       .gt("quantity", 0),
     supabase.rpc("fn_get_other_teams_status"),
     supabase.from("cards").select("card_code, name, rarity").eq("enabled", true).eq("exchangeable", true).neq("card_code", "VOUCHER"),
-    supabase
-      .from("team_property_purchases")
-      .select("id, team_id, price_paid, property:property_id(name), team:team_id(team_name)")
-      .neq("team_id", actor.teamId)
-      .eq("settled", false),
+    supabase.rpc("fn_list_takeover_targets"),
     supabase.from("card_notifications").select("id, message, created_at").eq("team_id", actor.teamId).order("created_at", { ascending: false }).limit(10),
     supabase.from("card_active_effects").select("id, effect_type, payload").eq("team_id", actor.teamId).is("consumed_at", null),
   ]);
@@ -260,13 +256,13 @@ export default async function TeamPage() {
     station_name: t.station_name,
   }));
 
-  const takeoverTargets = (takeoverTargetsRaw ?? []).map((t) => ({
-    purchase_id: t.id,
+  const takeoverTargets = (
+    (takeoverTargetsRaw ?? []) as { purchase_id: string; team_id: string; team_name: string; property_name: string; price_paid: number }[]
+  ).map((t) => ({
+    purchase_id: t.purchase_id,
     team_id: t.team_id,
-    // @ts-expect-error 1:1リレーションが配列型で推論されるため
-    team_name: t.team?.team_name ?? "",
-    // @ts-expect-error 1:1リレーションが配列型で推論されるため
-    property_name: t.property?.name ?? "",
+    team_name: t.team_name,
+    property_name: t.property_name,
     price_paid: t.price_paid,
   }));
 
