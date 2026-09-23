@@ -51,7 +51,7 @@ export default async function StaffPage() {
     supabase
       .from("teams")
       .select(
-        "id, team_number, team_name, representative_name, team_state(state, current_station_id, coin_balance_cache, is_paused, updated_at, current_station:current_station_id(name))"
+        "id, team_number, team_name, representative_name, team_state(state, current_station_id, coin_balance_cache, is_paused, updated_at, current_station:current_station_id(name), selected_start_station_id, selected_start_station:selected_start_station_id(name))"
       )
       .eq("event_id", actor.eventId)
       .order("team_number"),
@@ -188,6 +188,7 @@ export default async function StaffPage() {
     // @ts-expect-error 1:1リレーションが配列型で推論されるため
     const ts = t.team_state as {
       state: string; coin_balance_cache: number; is_paused: boolean; updated_at: string; current_station: { name: string } | null;
+      selected_start_station: { name: string } | null;
     } | null;
     const updatedAgoMs = ts?.updated_at ? nowMsForStaff - new Date(ts.updated_at).getTime() : null;
     const pendingCount = pendingCountByTeam.get(t.id) ?? 0;
@@ -204,6 +205,7 @@ export default async function StaffPage() {
       coin_balance_cache: coinBalance,
       totalAssets: coinBalance + propertyAssetTotal,
       currentStationName: ts?.current_station?.name ?? "-",
+      selectedStartStationName: ts?.selected_start_station?.name ?? null,
       isPaused: ts?.is_paused ?? false,
       updatedAgoMinutes: updatedAgoMs !== null ? Math.floor(updatedAgoMs / 60000) : null,
       pendingCount,
@@ -306,7 +308,14 @@ export default async function StaffPage() {
                     <td className="py-2">{i + 1}</td>
                     <td>{t.team_name}</td>
                     <td className="text-zinc-500">{t.representative_name ?? "-"}</td>
-                    <td>{t.currentStationName}</td>
+                    <td>
+                      {t.currentStationName}
+                      {t.state === "WAITING" && t.selectedStartStationName && (
+                        <span className="block text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                          選択中: {t.selectedStartStationName}
+                        </span>
+                      )}
+                    </td>
                     <td className={highlight ? "font-semibold" : ""}>{t.state}</td>
                     <td>{t.coin_balance_cache.toLocaleString()}</td>
                     <td>{t.updatedAgoMinutes !== null ? `${t.updatedAgoMinutes}分前` : "-"}</td>
