@@ -26,6 +26,7 @@ export function Leaderboard({ eventId }: { eventId: string }) {
   const prevMyRankRef = useRef<number | null>(null);
   const myRowRef = useRef<HTMLLIElement | null>(null);
   const prevMyRowTopRef = useRef<number | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -55,16 +56,30 @@ export function Leaderboard({ eventId }: { eventId: string }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- 初回マウント時のデータ取得
     load();
+
+    // team_stateはイベント全体(=全チーム分)を監視しているため、どこか1チームが行動するたびに
+    // 接続中の全チームのクライアントで再取得が走る。チーム数が増えるほど、1回の操作が
+    // 「チーム数」倍のリクエストに増幅されてしまうため、短時間の連続イベントを1回の
+    // 再取得にまとめる(デバウンス)ことで負荷を抑える。
+    function scheduleLoad() {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        debounceRef.current = null;
+        load();
+      }, 800);
+    }
+
     const supabase = createClient();
     const channel = supabase
       .channel(`leaderboard:${eventId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "team_state", filter: `event_id=eq.${eventId}` }, load)
-      .on("postgres_changes", { event: "*", schema: "public", table: "destination_queue", filter: `event_id=eq.${eventId}` }, load)
+      .on("postgres_changes", { event: "*", schema: "public", table: "team_state", filter: `event_id=eq.${eventId}` }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "destination_queue", filter: `event_id=eq.${eventId}` }, scheduleLoad)
       .subscribe();
     const interval = setInterval(load, 30000);
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [eventId, load]);
 

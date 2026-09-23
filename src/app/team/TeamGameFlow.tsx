@@ -91,6 +91,13 @@ export function TeamGameFlow({
   const [escapeDicePhase, setEscapeDicePhase] = useState<DicePhase | null>(null);
   const [escapeCanStop, setEscapeCanStop] = useState(false);
   const [escapeRoll, setEscapeRoll] = useState<{ roll: number; escaped: boolean; new_holder_team_name?: string } | null>(null);
+  // ネイティブのwindow.confirm()は端末・ブラウザによって表示が遅れたり、連続表示時に
+  // 自動で抑制されて反応しなくなることがある(CardPanelで実際に不具合の原因になった)ため、
+  // 常にこのパネル内蔵の確認UIを経由させる。
+  const [pendingConfirm, setPendingConfirm] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  function askConfirm(message: string, onConfirm: () => void) {
+    setPendingConfirm({ message, onConfirm });
+  }
   const selectedMission = offeredMissions.find((m) => m.id === missionAttempt?.selected_mission_id) ?? null;
   // 「サイコロを振る」ボタンと回転演出は、周りの白い枠なしで背景イラストの上に直接見せる。
   const hideOuterPanel = initialState === "DICE_READY" || dicePhase === "rolling" || dicePhase === "landing";
@@ -178,8 +185,7 @@ export function TeamGameFlow({
     if (error) setError(error);
   }
 
-  async function handleSelectDestination(stationId: string, stationName: string) {
-    if (!window.confirm(`${stationName}に移動します。確定後は変更できません。よろしいですか?`)) return;
+  async function handleSelectDestination(stationId: string) {
     setBusy(true);
     setError(null);
     const supabase = createClient();
@@ -193,7 +199,6 @@ export function TeamGameFlow({
   }
 
   async function handleCancelDiceForCard() {
-    if (!window.confirm("今振った出目を取り消して、カードで移動しますか?")) return;
     setBusy(true);
     setError(null);
     const supabase = createClient();
@@ -293,7 +298,6 @@ export function TeamGameFlow({
 
   async function handleSelectMission(missionId: string) {
     if (!missionAttempt) return;
-    if (!window.confirm("一度選択すると変更できません。このミッションでよろしいですか?")) return;
     setBusy(true);
     setError(null);
     const supabase = createClient();
@@ -309,8 +313,7 @@ export function TeamGameFlow({
     router.refresh();
   }
 
-  async function handlePurchaseProperty(propertyId: string, name: string) {
-    if (!window.confirm(`「${name}」を購入します。よろしいですか?`)) return;
+  async function handlePurchaseProperty(propertyId: string) {
     setBusy(true);
     setError(null);
     const supabase = createClient();
@@ -651,7 +654,7 @@ export function TeamGameFlow({
           {offeredMissions.map((m) => (
             <button
               key={m.id}
-              onClick={() => handleSelectMission(m.id)}
+              onClick={() => askConfirm("一度選択すると変更できません。このミッションでよろしいですか?", () => handleSelectMission(m.id))}
               disabled={busy}
               className="anim-press w-full rounded-xl border-2 border-zinc-300 bg-white p-3.5 text-left text-sm shadow-[var(--game-shadow-sm)] transition-transform hover:-translate-y-0.5 hover:border-game-blue disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900"
             >
@@ -732,7 +735,12 @@ export function TeamGameFlow({
                   価格: {formatYen(p.price)} / 利回り: {yieldPercent}%
                   {!affordable && " (資産不足)"}
                 </p>
-                <GameButton onClick={() => handlePurchaseProperty(p.id, p.name)} disabled={busy || !affordable} variant="card" className="mt-2 w-full">
+                <GameButton
+                  onClick={() => askConfirm(`「${p.name}」を購入します。よろしいですか?`, () => handlePurchaseProperty(p.id))}
+                  disabled={busy || !affordable}
+                  variant="card"
+                  className="mt-2 w-full"
+                >
                   🏠 購入する
                 </GameButton>
               </div>
@@ -759,7 +767,7 @@ export function TeamGameFlow({
           )}
           {dicePhase === "rolling" && canStopDice && diceResult && !diceResult.isCardMove && (
             <button
-              onClick={handleCancelDiceForCard}
+              onClick={() => askConfirm("今振った出目を取り消して、カードで移動しますか?", handleCancelDiceForCard)}
               disabled={busy}
               className="w-full text-center text-xs text-zinc-400 underline hover:text-zinc-600 disabled:opacity-50 dark:hover:text-zinc-300"
             >
@@ -811,7 +819,9 @@ export function TeamGameFlow({
               return (
                 <button
                   key={s.id}
-                  onClick={() => handleSelectDestination(s.id, s.name)}
+                  onClick={() =>
+                    askConfirm(`${s.name}に移動します。確定後は変更できません。よろしいですか?`, () => handleSelectDestination(s.id))
+                  }
                   disabled={busy}
                   className={`anim-press rounded-xl border-2 p-3 text-left text-sm font-bold transition-transform hover:-translate-y-0.5 disabled:opacity-50 ${
                     isGoal
@@ -834,6 +844,30 @@ export function TeamGameFlow({
         <p className="text-sm font-medium text-amber-600">
           本部により一時停止されています。本部の指示があるまでお待ちください。
         </p>
+      )}
+
+      {pendingConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog">
+          <div className="anim-pop w-full max-w-xs rounded-[var(--game-radius-lg)] border-2 border-zinc-300 bg-white p-5 text-center shadow-[var(--game-shadow-lg)] dark:border-zinc-700 dark:bg-zinc-900">
+            <p className="text-sm font-bold">{pendingConfirm.message}</p>
+            <div className="mt-4 flex flex-col gap-2">
+              <GameButton
+                onClick={() => {
+                  const { onConfirm } = pendingConfirm;
+                  setPendingConfirm(null);
+                  onConfirm();
+                }}
+                variant="card"
+                className="w-full !py-3 !text-base"
+              >
+                確定する
+              </GameButton>
+              <GameButton onClick={() => setPendingConfirm(null)} variant="secondary" className="w-full !py-2 !text-sm">
+                キャンセル
+              </GameButton>
+            </div>
+          </div>
+        </div>
       )}
 
       {![

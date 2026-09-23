@@ -39,7 +39,7 @@ export function StartCheckinReviewQueue({
         () => router.refresh()
       )
       .subscribe();
-    const interval = setInterval(() => router.refresh(), 15000);
+    const interval = setInterval(() => router.refresh(), 4000);
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);

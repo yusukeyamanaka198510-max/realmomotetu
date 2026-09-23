@@ -41,7 +41,7 @@ export function ArrivalReviewQueue({
       .subscribe();
     // Realtime切断時に新着提出を見逃さないためのフォールバック(本部が気づけないと現場が
     // 詰まってしまうため、承認キューは特に切断への耐性を持たせる)。
-    const interval = setInterval(() => router.refresh(), 15000);
+    const interval = setInterval(() => router.refresh(), 4000);
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);
