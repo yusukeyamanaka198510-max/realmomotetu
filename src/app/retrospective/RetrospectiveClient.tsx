@@ -38,7 +38,7 @@ function PhotoGallery({ urls }: { urls: string[] }) {
       {urls.map((url, i) => (
         <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
           {/* eslint-disable-next-line @next/next/no-img-element -- 署名付きURL(一時的)のためnext/imageの最適化キャッシュ対象に向かない */}
-          <img src={url} alt="" className="h-56 w-56 rounded-xl border-4 border-white object-cover shadow-lg dark:border-zinc-700" />
+          <img src={url} alt="" className="h-96 w-96 rounded-xl border-4 border-white object-cover shadow-lg dark:border-zinc-700" />
         </a>
       ))}
     </div>
@@ -50,6 +50,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
   let icon = "📌";
   let body: React.ReactNode = null;
   let subBody: React.ReactNode = null;
+  let subBodyIsWarning = false;
 
   switch (event.kind) {
     case "ARRIVAL":
@@ -65,12 +66,15 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
           <GameBadge tone={success ? "green" : "red"} size="lg">{success ? "成功" : "失敗"}</GameBadge>
           {d.difficulty ? <span className="text-lg text-zinc-400"> ({DIFFICULTY_LABEL[String(d.difficulty)] ?? String(d.difficulty)})</span> : null}
           {typeof d.reward === "number" && d.reward !== 0 && (
-            <span className="ml-1 font-mono text-lg text-zinc-500">{formatYen(d.reward)}</span>
+            <span className="ml-2 font-mono text-4xl font-black text-game-gold">{formatYen(d.reward)}</span>
           )}
         </span>
       );
       if (d.description) subBody = String(d.description);
-      if (!success && d.reason) subBody = `却下理由: ${String(d.reason)}`;
+      if (!success && d.reason) {
+        subBody = `却下理由: ${String(d.reason)}`;
+        subBodyIsWarning = true;
+      }
       break;
     }
     case "BONUS_MISSION": {
@@ -81,7 +85,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
           ボーナスミッション「{String(d.title ?? "-")}」
           <GameBadge tone={success ? "green" : "red"} size="lg">{success ? "成功" : "失敗"}</GameBadge>
           {typeof d.reward === "number" && d.reward !== 0 && (
-            <span className="ml-1 font-mono text-lg text-zinc-500">{formatYen(d.reward)}</span>
+            <span className="ml-2 font-mono text-4xl font-black text-game-gold">{formatYen(d.reward)}</span>
           )}
         </span>
       );
@@ -93,7 +97,9 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
       body = (
         <span>
           最終目的地「{String(d.station_name ?? "-")}」に到達!
-          {typeof d.bonus === "number" && <span className="ml-1 font-mono text-lg text-amber-600">+{formatYen(d.bonus)}</span>}
+          {typeof d.bonus === "number" && (
+            <span className="ml-2 font-mono text-4xl font-black text-amber-600">+{formatYen(d.bonus)}</span>
+          )}
         </span>
       );
       break;
@@ -122,7 +128,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
       body = (
         <span>
           {COIN_TRANSACTION_LABELS[type] ?? type}
-          <span className={`ml-1 font-mono text-lg ${amount >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+          <span className={`ml-2 font-mono text-4xl font-black ${amount >= 0 ? "text-emerald-600" : "text-red-600"}`}>
             {amount >= 0 ? "+" : ""}
             {formatYen(amount)}
           </span>
@@ -136,7 +142,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
       body = (
         <span>
           本部による到着差し戻し
-          {d.reason ? <span className="text-zinc-500"> 「{String(d.reason)}」</span> : null}
+          {d.reason ? <span className="font-bold text-game-red"> 「{String(d.reason)}」</span> : null}
         </span>
       );
       break;
@@ -158,7 +164,11 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
         <div className="min-w-0 flex-1">
           <p className="text-xl text-zinc-400">{timeLabel(event.at)}</p>
           <p className="mt-1">{body}</p>
-          {subBody && <p className="mt-1 text-xl text-zinc-500">{subBody}</p>}
+          {subBody && (
+            <p className={`mt-2 text-2xl font-bold ${subBodyIsWarning ? "text-game-red" : "text-zinc-600 dark:text-zinc-300"}`}>
+              {subBody}
+            </p>
+          )}
           <PhotoGallery urls={event.photoUrls} />
         </div>
       </div>
@@ -278,7 +288,7 @@ export function RetrospectiveClient({
           {selectedEvents.length === 0 ? (
             <p className="text-2xl text-zinc-400">まだ記録がありません</p>
           ) : (
-            <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <ul className="space-y-3">
               {selectedEvents.map((e, i) => (
                 <EventRow key={i} event={e} />
               ))}
