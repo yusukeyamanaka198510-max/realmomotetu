@@ -34,11 +34,11 @@ function timeLabel(at: string) {
 function PhotoGallery({ urls }: { urls: string[] }) {
   if (urls.length === 0) return null;
   return (
-    <div className="mt-2 flex flex-wrap gap-2">
+    <div className="mt-3 flex flex-wrap gap-3">
       {urls.map((url, i) => (
         <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
           {/* eslint-disable-next-line @next/next/no-img-element -- 署名付きURL(一時的)のためnext/imageの最適化キャッシュ対象に向かない */}
-          <img src={url} alt="" className="h-20 w-20 rounded-lg border-2 border-white object-cover shadow dark:border-zinc-700" />
+          <img src={url} alt="" className="h-56 w-56 rounded-xl border-4 border-white object-cover shadow-lg dark:border-zinc-700" />
         </a>
       ))}
     </div>
@@ -62,10 +62,10 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
       body = (
         <span>
           ミッション「{String(d.title ?? "-")}」
-          <GameBadge tone={success ? "green" : "red"}>{success ? "成功" : "失敗"}</GameBadge>
-          {d.difficulty ? <span className="text-xs text-zinc-400"> ({DIFFICULTY_LABEL[String(d.difficulty)] ?? String(d.difficulty)})</span> : null}
+          <GameBadge tone={success ? "green" : "red"} size="lg">{success ? "成功" : "失敗"}</GameBadge>
+          {d.difficulty ? <span className="text-lg text-zinc-400"> ({DIFFICULTY_LABEL[String(d.difficulty)] ?? String(d.difficulty)})</span> : null}
           {typeof d.reward === "number" && d.reward !== 0 && (
-            <span className="ml-1 font-mono text-xs text-zinc-500">{formatYen(d.reward)}</span>
+            <span className="ml-1 font-mono text-lg text-zinc-500">{formatYen(d.reward)}</span>
           )}
         </span>
       );
@@ -79,9 +79,9 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
       body = (
         <span>
           ボーナスミッション「{String(d.title ?? "-")}」
-          <GameBadge tone={success ? "green" : "red"}>{success ? "成功" : "失敗"}</GameBadge>
+          <GameBadge tone={success ? "green" : "red"} size="lg">{success ? "成功" : "失敗"}</GameBadge>
           {typeof d.reward === "number" && d.reward !== 0 && (
-            <span className="ml-1 font-mono text-xs text-zinc-500">{formatYen(d.reward)}</span>
+            <span className="ml-1 font-mono text-lg text-zinc-500">{formatYen(d.reward)}</span>
           )}
         </span>
       );
@@ -93,7 +93,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
       body = (
         <span>
           最終目的地「{String(d.station_name ?? "-")}」に到達!
-          {typeof d.bonus === "number" && <span className="ml-1 font-mono text-xs text-amber-600">+{formatYen(d.bonus)}</span>}
+          {typeof d.bonus === "number" && <span className="ml-1 font-mono text-lg text-amber-600">+{formatYen(d.bonus)}</span>}
         </span>
       );
       break;
@@ -122,7 +122,7 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
       body = (
         <span>
           {COIN_TRANSACTION_LABELS[type] ?? type}
-          <span className={`ml-1 font-mono text-xs ${amount >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+          <span className={`ml-1 font-mono text-lg ${amount >= 0 ? "text-emerald-600" : "text-red-600"}`}>
             {amount >= 0 ? "+" : ""}
             {formatYen(amount)}
           </span>
@@ -152,13 +152,13 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
   }
 
   return (
-    <li className="rounded-xl bg-zinc-50 px-3 py-2 dark:bg-zinc-800/60">
-      <div className="flex items-start gap-2 text-sm">
-        <span className="shrink-0 text-base leading-none">{icon}</span>
+    <li className="rounded-2xl bg-zinc-50 px-5 py-4 dark:bg-zinc-800/60">
+      <div className="flex items-start gap-4 text-2xl">
+        <span className="shrink-0 text-5xl leading-none">{icon}</span>
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-zinc-400">{timeLabel(event.at)}</p>
-          <p>{body}</p>
-          {subBody && <p className="mt-0.5 text-xs text-zinc-500">{subBody}</p>}
+          <p className="text-xl text-zinc-400">{timeLabel(event.at)}</p>
+          <p className="mt-1">{body}</p>
+          {subBody && <p className="mt-1 text-xl text-zinc-500">{subBody}</p>}
           <PhotoGallery urls={event.photoUrls} />
         </div>
       </div>
@@ -168,14 +168,14 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
 
 function TeamResultHero({ team }: { team: RetrospectiveTeam }) {
   return (
-    <div className="anim-pop rounded-[var(--game-radius-lg)] border-4 border-game-gold bg-gradient-to-b from-game-navy to-slate-900 p-6 text-center shadow-[var(--game-shadow-lg)]">
-      <p className="text-sm font-bold text-white/70">最終結果</p>
-      <p className="mt-1 text-4xl font-black text-white">{team.rank}位</p>
-      <GameText as="h2" variant="title" className="mt-2 block !text-white">
+    <div className="anim-pop rounded-[var(--game-radius-lg)] border-4 border-game-gold bg-gradient-to-b from-game-navy to-slate-900 p-10 text-center shadow-[var(--game-shadow-lg)]">
+      <p className="text-xl font-bold text-white/70">最終結果</p>
+      <p className="mt-2 text-7xl font-black text-white">{team.rank}位</p>
+      <GameText as="h2" variant="title" className="mt-3 block !text-6xl !text-white sm:!text-7xl">
         {team.team_name}
       </GameText>
-      <p className="mt-3 text-xs font-bold text-white/60">総資産額</p>
-      <GameText as="p" variant="coin-positive" className="text-3xl sm:text-4xl">
+      <p className="mt-4 text-lg font-bold text-white/60">総資産額</p>
+      <GameText as="p" variant="coin-positive" className="text-5xl sm:text-6xl">
         {formatYen(team.total_assets)}
       </GameText>
     </div>
@@ -237,32 +237,32 @@ export function RetrospectiveClient({
   const selectedEvents = selectedTeamId ? (eventsByTeamId[selectedTeamId] ?? []) : [];
 
   return (
-    <div className="space-y-4">
-      <GameText as="h1" variant="title" className="block">
+    <div className="space-y-6">
+      <GameText as="h1" variant="title" className="block !text-5xl sm:!text-6xl">
         📖 振り返り
       </GameText>
 
       <GamePanel title="現在の順位" icon="🏆" accent="gold" collapsible defaultOpen>
-        <ul className="space-y-1.5 text-sm">
+        <ul className="grid grid-cols-1 gap-2 text-xl sm:grid-cols-2 lg:grid-cols-3">
           {teams.map((t) => (
-            <li key={t.team_id} className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2 dark:bg-zinc-800/60">
-              <span className="flex items-center gap-1.5">
-                <span className={t.rank <= 3 ? "text-base" : "text-xs text-zinc-400"}>{RANK_MEDAL[t.rank] ?? `${t.rank}位`}</span>
-                <span>{t.team_name}</span>
+            <li key={t.team_id} className="flex items-center justify-between gap-3 rounded-xl bg-zinc-50 px-4 py-3 dark:bg-zinc-800/60">
+              <span className="flex min-w-0 items-center gap-2">
+                <span className={t.rank <= 3 ? "text-3xl" : "text-lg text-zinc-400"}>{RANK_MEDAL[t.rank] ?? `${t.rank}位`}</span>
+                <span className="truncate">{t.team_name}</span>
               </span>
-              <span className="font-mono tabular-nums text-game-gold">{formatYen(t.total_assets)}</span>
+              <span className="shrink-0 font-mono tabular-nums text-game-gold">{formatYen(t.total_assets)}</span>
             </li>
           ))}
         </ul>
       </GamePanel>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex flex-wrap gap-3">
         {teams.map((t) => (
           <button
             key={t.team_id}
             type="button"
             onClick={() => selectTeam(t.team_id)}
-            className={`shrink-0 rounded-full border-2 px-3 py-1.5 text-sm font-bold ${
+            className={`shrink-0 rounded-full border-2 px-6 py-3 text-2xl font-bold ${
               t.team_id === selectedTeamId
                 ? "border-game-navy bg-game-navy text-white dark:border-game-gold dark:bg-game-gold dark:text-slate-900"
                 : "border-zinc-300 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
@@ -276,15 +276,15 @@ export function RetrospectiveClient({
       {selectedTeam && (
         <GamePanel title="今日のできごと" icon="📷" accent="navy">
           {selectedEvents.length === 0 ? (
-            <p className="text-sm text-zinc-400">まだ記録がありません</p>
+            <p className="text-2xl text-zinc-400">まだ記録がありません</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               {selectedEvents.map((e, i) => (
                 <EventRow key={i} event={e} />
               ))}
             </ul>
           )}
-          <div className="mt-4">
+          <div className="mt-6">
             {revealed ? (
               <>
                 {showConfetti && <ConfettiBurst />}
@@ -294,11 +294,11 @@ export function RetrospectiveClient({
               <button
                 type="button"
                 onClick={reveal}
-                className="anim-pop w-full rounded-[var(--game-radius-lg)] border-4 border-dashed border-game-gold bg-gradient-to-b from-amber-50 to-amber-100 p-8 text-center shadow-[var(--game-shadow-md)] dark:from-amber-950 dark:to-slate-900"
+                className="anim-pop w-full rounded-[var(--game-radius-lg)] border-4 border-dashed border-game-gold bg-gradient-to-b from-amber-50 to-amber-100 p-14 text-center shadow-[var(--game-shadow-md)] dark:from-amber-950 dark:to-slate-900"
               >
-                <p className="text-4xl">🎁</p>
-                <p className="mt-2 text-lg font-black text-game-navy dark:text-game-gold">どのチーム?</p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">タップして結果を発表!</p>
+                <p className="text-8xl">🎁</p>
+                <p className="mt-4 text-4xl font-black text-game-navy dark:text-game-gold">どのチーム?</p>
+                <p className="mt-2 text-xl text-zinc-500 dark:text-zinc-400">タップして結果を発表!</p>
               </button>
             )}
           </div>

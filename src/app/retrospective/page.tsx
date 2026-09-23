@@ -57,8 +57,8 @@ export default async function RetrospectivePage() {
   return (
     <div className="min-h-dvh bg-cover bg-top bg-fixed" style={{ backgroundImage: "url(/board-illustration.webp)" }}>
       <div className="min-h-dvh bg-white/60 dark:bg-slate-950/75">
-        <div className="mx-auto max-w-2xl space-y-4 p-6">
-          <Link href="/staff" className="text-sm text-zinc-500 hover:underline">
+        <div className="mx-auto max-w-6xl space-y-6 p-6 sm:p-10">
+          <Link href="/staff" className="text-lg text-zinc-500 hover:underline">
             ← TOPに戻る
           </Link>
           <RetrospectiveClient
