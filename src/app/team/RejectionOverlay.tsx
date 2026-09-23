@@ -41,21 +41,21 @@ export function RejectionOverlay({ notifications }: { notifications: Notif[] }) 
   const isArrival = active.kind === "ARRIVAL";
 
   return (
-    <div role="alertdialog" className="fixed inset-0 z-[65] flex flex-col items-center justify-center bg-black/80 px-6">
-      <div className="anim-shake w-full max-w-xs rounded-[var(--game-radius-lg)] border-4 border-game-red bg-white p-6 text-center shadow-[var(--game-shadow-lg)] dark:bg-zinc-900">
-        <p className="text-5xl">{isArrival ? "🙅" : "💦"}</p>
-        <p className="game-text-event mt-2 text-xl text-game-red">
+    <div role="alertdialog" className="fixed inset-0 z-[65] flex flex-col items-center justify-center bg-black/85 px-5">
+      <div className="anim-shake w-full max-w-md rounded-[var(--game-radius-lg)] border-4 border-game-red bg-white p-8 text-center shadow-[var(--game-shadow-lg)] dark:bg-zinc-900">
+        <p className="text-7xl">{isArrival ? "🙅" : "💦"}</p>
+        <p className="game-text-event mt-3 text-3xl text-game-red">
           {isArrival ? "到着報告が差し戻されました" : "ミッション失敗"}
         </p>
-        <p className="mt-3 rounded-lg bg-red-50 p-3 text-left text-sm font-bold text-zinc-700 dark:bg-red-950 dark:text-zinc-200">
+        <p className="mt-4 rounded-lg bg-red-50 p-4 text-left text-lg font-bold leading-relaxed text-zinc-700 dark:bg-red-950 dark:text-zinc-200">
           理由: {active.reason}
         </p>
-        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
           {isArrival ? "内容を確認し、もう一度到着報告を送信してください。" : "本部の判定に従い、次の操作に進んでください。"}
         </p>
-        <div className="mt-5">
-          <GameButton onClick={() => setActive(null)} variant="primary" className="w-full">
-            確認
+        <div className="mt-6">
+          <GameButton onClick={() => setActive(null)} variant="primary" className="w-full !py-4 !text-lg">
+            確認しました
           </GameButton>
         </div>
       </div>
