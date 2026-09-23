@@ -73,6 +73,15 @@ export function TeamGameFlow({
   const [startCheckinFiles, setStartCheckinFiles] = useState<File[]>([]);
   const [stationQuery, setStationQuery] = useState("");
   const [purchasedThisVisit, setPurchasedThisVisit] = useState(false);
+  // 購入直後、サーバーコンポーネントの再取得(router.refresh)が終わるまで一覧に
+  // 残り続けて「購入できてしまいそうに見える」時間が長かったため、購入成立後は
+  // router.refreshの完了を待たずにその場で一覧から消す(楽観的更新)。
+  const [localProperties, setLocalProperties] = useState(properties);
+  const [propertiesSnapshot, setPropertiesSnapshot] = useState(properties);
+  if (properties !== propertiesSnapshot) {
+    setPropertiesSnapshot(properties);
+    setLocalProperties(properties);
+  }
   const { dicePhase, canStopDice, rollingDiceCount, rollPlainDice, stopDice, diceLanded } = useDiceCard();
   // 振り始めた直後はサーバーの本当の出目(diceResult)がまだ届いていないことがあるため、
   // 個数だけ先に確定させたrollingDiceCount分のダミー配列で個数のズレを防ぐ。
@@ -324,6 +333,7 @@ export function TeamGameFlow({
       return;
     }
     setPurchasedThisVisit(true);
+    setLocalProperties((prev) => prev.filter((p) => p.id !== propertyId));
     router.refresh();
   }
 
@@ -725,7 +735,7 @@ export function TeamGameFlow({
 
       {initialState === "PROPERTY_PURCHASE" && (
         <div className="space-y-3">
-          {properties.map((p) => {
+          {localProperties.map((p) => {
             const affordable = coinBalance >= p.price;
             const yieldPercent = p.price > 0 ? Math.round((p.yield_amount / p.price) * 1000) / 10 : 0;
             return (
@@ -746,7 +756,7 @@ export function TeamGameFlow({
               </div>
             );
           })}
-          {properties.length === 0 && <p className="text-sm text-zinc-500">この駅に物件はありません</p>}
+          {localProperties.length === 0 && <p className="text-sm text-zinc-500">この駅に物件はありません</p>}
           <button
             onClick={handleFinishPropertyPurchase}
             disabled={busy}
