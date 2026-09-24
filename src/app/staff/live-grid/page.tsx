@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getActor } from "@/lib/game/actor";
 import { createClient } from "@/lib/supabase/server";
 import { LiveGridClient, type LiveGridTeam } from "./LiveGridClient";
+import { LineMap } from "./LineMap";
 
 export default async function LiveGridPage() {
   const actor = await getActor();
@@ -10,7 +11,7 @@ export default async function LiveGridPage() {
 
   const supabase = await createClient();
 
-  const [{ data: teams }, { data: allPropertyPurchases }] = await Promise.all([
+  const [{ data: teams }, { data: allPropertyPurchases }, { data: lines }, { data: stations }, { data: edges }] = await Promise.all([
     supabase
       .from("teams")
       .select(
@@ -19,6 +20,9 @@ export default async function LiveGridPage() {
       .eq("event_id", actor.eventId)
       .order("team_number"),
     supabase.from("team_property_purchases").select("team_id, price_paid").eq("settled", false),
+    supabase.from("lines").select("id, name").eq("event_id", actor.eventId).order("name"),
+    supabase.from("stations").select("id, name").eq("event_id", actor.eventId).order("name"),
+    supabase.from("edges").select("station_a_id, station_b_id, line_id").eq("event_id", actor.eventId).eq("is_active", true),
   ]);
 
   // eslint-disable-next-line react-hooks/purity -- サーバーレンダリング時点の経過時間表示のため
@@ -29,6 +33,7 @@ export default async function LiveGridPage() {
     // @ts-expect-error 1:1リレーションが配列型で推論されるため
     const ts = t.team_state as {
       state: string;
+      current_station_id: string | null;
       coin_balance_cache: number;
       has_bombii: boolean;
       is_paused: boolean;
@@ -46,6 +51,7 @@ export default async function LiveGridPage() {
       teamNumber: t.team_number,
       teamName: t.team_name,
       state: (ts?.state ?? "WAITING") as LiveGridTeam["state"],
+      currentStationId: ts?.current_station_id ?? null,
       currentStationName: ts?.current_station?.name ?? "-",
       coinBalance,
       totalAssets: coinBalance + propertyAssetTotal,
@@ -56,6 +62,12 @@ export default async function LiveGridPage() {
     };
   });
 
+  const teamsByStation: Record<string, { teamNumber: number; teamName: string }[]> = {};
+  for (const t of teamRows) {
+    if (!t.currentStationId) continue;
+    (teamsByStation[t.currentStationId] ??= []).push({ teamNumber: t.teamNumber, teamName: t.teamName });
+  }
+
   return (
     <div className="min-h-dvh bg-zinc-50 p-4 dark:bg-zinc-950">
       <div className="flex items-center justify-between">
@@ -65,6 +77,7 @@ export default async function LiveGridPage() {
         </Link>
       </div>
       <LiveGridClient eventId={actor.eventId} teams={teamRows} />
+      <LineMap stations={stations ?? []} edges={edges ?? []} lines={lines ?? []} teamsByStation={teamsByStation} />
     </div>
   );
 }

@@ -26,6 +26,7 @@ export type LiveGridTeam = {
     | "PROPERTY_PURCHASE"
     | "PAUSED"
     | "FINISHED";
+  currentStationId: string | null;
   currentStationName: string;
   coinBalance: number;
   totalAssets: number;
@@ -115,7 +116,7 @@ export function LiveGridClient({ eventId, teams }: { eventId: string; teams: Liv
               {action.label}
             </p>
 
-            <p className="mt-1.5 truncate text-xs text-zinc-500 dark:text-zinc-400">📍{t.currentStationName}</p>
+            <p className="mt-1.5 truncate text-lg font-black text-zinc-900 dark:text-zinc-50">📍{t.currentStationName}</p>
             <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-zinc-800 dark:text-zinc-100">
               {formatYen(t.totalAssets)}
             </p>
