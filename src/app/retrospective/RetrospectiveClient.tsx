@@ -152,7 +152,9 @@ function EventRow({ event }: { event: RetrospectiveEvent }) {
         </span>
       );
       if (typeof d.yield_amount === "number") {
-        subBody = `利回り: 精算時に ${formatYen(d.yield_amount)} 上乗せ`;
+        const price = typeof d.price === "number" ? d.price : null;
+        const rate = price ? (d.yield_amount / price) * 100 : null;
+        subBody = `利回り${rate !== null ? ` ${rate.toFixed(1)}%` : ""}: 精算時に ${formatYen(d.yield_amount)} 上乗せ`;
       }
       break;
     case "COIN": {
