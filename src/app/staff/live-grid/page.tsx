@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getActor } from "@/lib/game/actor";
 import { createClient } from "@/lib/supabase/server";
 import { LiveGridClient, type LiveGridTeam } from "./LiveGridClient";
-import { LineMap } from "./LineMap";
 
 export default async function LiveGridPage() {
   const actor = await getActor();
@@ -11,7 +10,7 @@ export default async function LiveGridPage() {
 
   const supabase = await createClient();
 
-  const [{ data: teams }, { data: allPropertyPurchases }, { data: stations }, { data: edges }] = await Promise.all([
+  const [{ data: teams }, { data: allPropertyPurchases }, { data: allTeamCards }] = await Promise.all([
     supabase
       .from("teams")
       .select(
@@ -20,8 +19,7 @@ export default async function LiveGridPage() {
       .eq("event_id", actor.eventId)
       .order("team_number"),
     supabase.from("team_property_purchases").select("team_id, price_paid").eq("settled", false),
-    supabase.from("stations").select("id, name").eq("event_id", actor.eventId).order("name"),
-    supabase.from("edges").select("station_a_id, station_b_id, line_id").eq("event_id", actor.eventId).eq("is_active", true),
+    supabase.from("team_cards").select("team_id, quantity, card:card_id(name, rarity)").gt("quantity", 0),
   ]);
 
   // eslint-disable-next-line react-hooks/purity -- サーバーレンダリング時点の経過時間表示のため
@@ -59,14 +57,12 @@ export default async function LiveGridPage() {
       isPaused: ts?.is_paused ?? false,
       isStuck,
       updatedAgoMinutes: updatedAgoMs !== null ? Math.floor(updatedAgoMs / 60000) : null,
+      cards: (allTeamCards ?? [])
+        .filter((c) => c.team_id === t.id)
+        // @ts-expect-error 1:1リレーションが配列型で推論されるため
+        .map((c) => ({ name: c.card?.name ?? "", rarity: c.card?.rarity ?? "NORMAL", quantity: c.quantity })),
     };
   });
-
-  const teamsByStation: Record<string, { teamNumber: number; teamName: string }[]> = {};
-  for (const t of teamRows) {
-    if (!t.currentStationId) continue;
-    (teamsByStation[t.currentStationId] ??= []).push({ teamNumber: t.teamNumber, teamName: t.teamName });
-  }
 
   return (
     <div className="min-h-dvh bg-zinc-50 p-4 dark:bg-zinc-950">
@@ -77,7 +73,6 @@ export default async function LiveGridPage() {
         </Link>
       </div>
       <LiveGridClient eventId={actor.eventId} teams={teamRows} />
-      <LineMap stations={stations ?? []} edges={edges ?? []} teamsByStation={teamsByStation} />
     </div>
   );
 }
