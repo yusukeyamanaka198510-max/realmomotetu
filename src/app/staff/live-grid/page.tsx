@@ -11,7 +11,7 @@ export default async function LiveGridPage() {
 
   const supabase = await createClient();
 
-  const [{ data: teams }, { data: allPropertyPurchases }, { data: lines }, { data: stations }, { data: edges }] = await Promise.all([
+  const [{ data: teams }, { data: allPropertyPurchases }, { data: stations }, { data: edges }] = await Promise.all([
     supabase
       .from("teams")
       .select(
@@ -20,7 +20,6 @@ export default async function LiveGridPage() {
       .eq("event_id", actor.eventId)
       .order("team_number"),
     supabase.from("team_property_purchases").select("team_id, price_paid").eq("settled", false),
-    supabase.from("lines").select("id, name").eq("event_id", actor.eventId).order("name"),
     supabase.from("stations").select("id, name").eq("event_id", actor.eventId).order("name"),
     supabase.from("edges").select("station_a_id, station_b_id, line_id").eq("event_id", actor.eventId).eq("is_active", true),
   ]);
@@ -77,7 +76,7 @@ export default async function LiveGridPage() {
         </Link>
       </div>
       <LiveGridClient eventId={actor.eventId} teams={teamRows} />
-      <LineMap stations={stations ?? []} edges={edges ?? []} lines={lines ?? []} teamsByStation={teamsByStation} />
+      <LineMap stations={stations ?? []} edges={edges ?? []} teamsByStation={teamsByStation} />
     </div>
   );
 }
