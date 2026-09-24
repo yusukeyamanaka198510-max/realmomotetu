@@ -31,6 +31,7 @@ export type LiveGridTeam = {
   coinBalance: number;
   propertyAssetTotal: number;
   totalAssets: number;
+  rank: number;
   hasBombii: boolean;
   isPaused: boolean;
   isStuck: boolean;
@@ -43,6 +44,14 @@ const RARITY_CLASS: Record<LiveGridTeam["cards"][number]["rarity"], string> = {
   RARE: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
   SUPER_RARE: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
 };
+
+const RANK_MEDAL: Record<number, string> = { 1: "🥇", 2: "🥈", 3: "🥉" };
+const RANK_CLASS: Record<number, string> = {
+  1: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
+  2: "bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-100",
+  3: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200",
+};
+const RANK_CLASS_DEFAULT = "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300";
 
 // チームのスマホ画面に出る「今すべきこと」と同じ文言。チームの操作待ちは青、
 // 本部の確認・判定待ちは黄、それ以外(待機・終了)はグレーで一目で区別する。
@@ -111,15 +120,20 @@ export function LiveGridClient({ eventId, teams }: { eventId: string; teams: Liv
             }`}
           >
             <div className="flex items-center justify-between gap-1">
-              <p className="truncate text-sm font-bold text-zinc-900 dark:text-zinc-50">
-                {t.teamNumber}. {t.teamName}
-              </p>
+              <span
+                className={`shrink-0 rounded-lg px-2 py-0.5 text-2xl font-black tabular-nums ${RANK_CLASS[t.rank] ?? RANK_CLASS_DEFAULT}`}
+              >
+                {RANK_MEDAL[t.rank] ?? `${t.rank}位`}
+              </span>
               {t.hasBombii && (
                 <span className="shrink-0 text-lg" title="ボンビー憑依中">
                   😈
                 </span>
               )}
             </div>
+            <p className="mt-1 truncate text-sm font-bold text-zinc-900 dark:text-zinc-50">
+              {t.teamNumber}. {t.teamName}
+            </p>
 
             <p className={`mt-1.5 rounded-lg px-2 py-1.5 text-xs font-bold leading-snug ${TONE_CLASS[action.tone]}`}>
               {action.label}

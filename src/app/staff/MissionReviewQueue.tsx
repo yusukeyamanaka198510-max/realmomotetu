@@ -19,33 +19,13 @@ type ReviewItem = {
 };
 
 export function MissionReviewQueue({
-  eventId,
   initialItems,
 }: {
-  eventId: string;
   initialItems: ReviewItem[];
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`mission_review_queue:${eventId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "review_queue", filter: `event_id=eq.${eventId}` },
-        () => router.refresh()
-      )
-      .subscribe();
-    // Realtime切断時に新着提出を見逃さないためのフォールバック。
-    const interval = setInterval(() => router.refresh(), 4000);
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(interval);
-    };
-  }, [eventId, router]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -65,7 +45,11 @@ export function MissionReviewQueue({
   }, [initialItems]);
 
   const [items, setItems] = useState(initialItems);
-  useEffect(() => setItems(initialItems), [initialItems]);
+  const [itemsSnapshot, setItemsSnapshot] = useState(initialItems);
+  if (initialItems !== itemsSnapshot) {
+    setItemsSnapshot(initialItems);
+    setItems(initialItems);
+  }
 
   async function review(attemptId: string, decision: "SUCCESS" | "FAILURE") {
     let reason: string | null = null;

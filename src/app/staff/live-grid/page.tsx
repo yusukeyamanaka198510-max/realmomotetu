@@ -26,7 +26,7 @@ export default async function LiveGridPage() {
   const nowMs = Date.now();
   const STUCK_THRESHOLD_MS = 20 * 60 * 1000;
 
-  const teamRows: LiveGridTeam[] = (teams ?? []).map((t) => {
+  const rawTeamRows = (teams ?? []).map((t) => {
     // @ts-expect-error 1:1リレーションが配列型で推論されるため
     const ts = t.team_state as {
       state: string;
@@ -63,6 +63,13 @@ export default async function LiveGridPage() {
         .map((c) => ({ name: c.card?.name ?? "", rarity: c.card?.rarity ?? "NORMAL", quantity: c.quantity })),
     };
   });
+
+  // fn_get_leaderboard()と同じ「同額は同順位、次の順位は人数分飛ぶ」方式(SQLのrank()相当)。
+  const sortedAssets = rawTeamRows.map((r) => r.totalAssets).sort((a, b) => b - a);
+  const teamRows: LiveGridTeam[] = rawTeamRows.map((r) => ({
+    ...r,
+    rank: sortedAssets.filter((a) => a > r.totalAssets).length + 1,
+  }));
 
   return (
     <div className="min-h-dvh bg-zinc-50 p-4 dark:bg-zinc-950">

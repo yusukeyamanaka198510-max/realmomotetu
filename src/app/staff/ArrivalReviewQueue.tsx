@@ -19,34 +19,13 @@ type ReviewItem = {
 };
 
 export function ArrivalReviewQueue({
-  eventId,
   initialItems,
 }: {
-  eventId: string;
   initialItems: ReviewItem[];
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`review_queue:${eventId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "review_queue", filter: `event_id=eq.${eventId}` },
-        () => router.refresh()
-      )
-      .subscribe();
-    // Realtime切断時に新着提出を見逃さないためのフォールバック(本部が気づけないと現場が
-    // 詰まってしまうため、承認キューは特に切断への耐性を持たせる)。
-    const interval = setInterval(() => router.refresh(), 4000);
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(interval);
-    };
-  }, [eventId, router]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -66,7 +45,11 @@ export function ArrivalReviewQueue({
   }, [initialItems]);
 
   const [items, setItems] = useState(initialItems);
-  useEffect(() => setItems(initialItems), [initialItems]);
+  const [itemsSnapshot, setItemsSnapshot] = useState(initialItems);
+  if (initialItems !== itemsSnapshot) {
+    setItemsSnapshot(initialItems);
+    setItems(initialItems);
+  }
 
   async function review(arrivalSubmissionId: string, decision: "APPROVE" | "REJECT") {
     let reason: string | null = null;
