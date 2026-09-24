@@ -4,9 +4,12 @@ import { useMemo } from "react";
 
 type CardNotification = { id: string; message: string; created_at: string };
 
-// カード獲得(🎴CARD:)は専用のスロット演出があるため、ここでは表示しない。
+// カード獲得(🎴CARD:)と本部アナウンス(📢本部アナウンス:)は専用の演出モーダルがあるため、ここでは表示しない。
 export function AnnouncementBox({ notifications }: { notifications: CardNotification[] }) {
-  const visible = useMemo(() => notifications.filter((n) => !n.message.startsWith("🎴CARD:")), [notifications]);
+  const visible = useMemo(
+    () => notifications.filter((n) => !n.message.startsWith("🎴CARD:") && !n.message.startsWith("📢本部アナウンス: ")),
+    [notifications]
+  );
 
   if (visible.length === 0) return null;
 

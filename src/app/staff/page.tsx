@@ -16,6 +16,7 @@ import { StaffSection } from "./StaffUI";
 import { CardEnabledPanel } from "./CardEnabledPanel";
 import { RehearsalResetPanel } from "./RehearsalResetPanel";
 import { CardUseAlert } from "./CardUseAlert";
+import { AnnouncementBroadcastPanel } from "./AnnouncementBroadcastPanel";
 
 export default async function StaffPage() {
   const actor = await getActor();
@@ -252,6 +253,10 @@ export default async function StaffPage() {
       </div>
 
       {/* 触る頻度の高い操作(承認キュー)を上位に、開始/終了などの設定系は下に配置している。 */}
+
+      <StaffSection icon="📢" title="全チームへアナウンス(モーダル表示)" accent="indigo">
+        <AnnouncementBroadcastPanel />
+      </StaffSection>
 
       <StaffSection icon="🚉" title="スタートチェックイン確認待ち" count={pendingStartCheckins.length} accent="sky">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
