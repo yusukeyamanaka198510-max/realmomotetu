@@ -15,6 +15,7 @@ import { PasswordChangePanel } from "@/components/PasswordChangePanel";
 import { StaffSection } from "./StaffUI";
 import { CardEnabledPanel } from "./CardEnabledPanel";
 import { RehearsalResetPanel } from "./RehearsalResetPanel";
+import { CardUseAlert } from "./CardUseAlert";
 
 export default async function StaffPage() {
   const actor = await getActor();
@@ -233,6 +234,7 @@ export default async function StaffPage() {
             </span>
           )}
         </h1>
+        <CardUseAlert eventId={actor.eventId} />
         <div className="flex gap-4">
           <Link href="/staff/live-grid" className="text-sm text-zinc-500 hover:underline">
             全チーム一覧(大画面用) →

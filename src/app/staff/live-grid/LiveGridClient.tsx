@@ -35,6 +35,13 @@ export type LiveGridTeam = {
   isPaused: boolean;
   isStuck: boolean;
   updatedAgoMinutes: number | null;
+  cards: { name: string; rarity: "NORMAL" | "RARE" | "SUPER_RARE"; quantity: number }[];
+};
+
+const RARITY_CLASS: Record<LiveGridTeam["cards"][number]["rarity"], string> = {
+  NORMAL: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+  RARE: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
+  SUPER_RARE: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
 };
 
 // チームのスマホ画面に出る「今すべきこと」と同じ文言。チームの操作待ちは青、
@@ -79,6 +86,7 @@ export function LiveGridClient({ eventId, teams }: { eventId: string; teams: Liv
     const channel = supabase
       .channel(`staff-live-grid:${eventId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "team_state" }, scheduleRefresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "team_cards" }, scheduleRefresh)
       .subscribe();
 
     // Realtime切断時に更新を見逃さないためのフォールバック(他の本部画面と同じ間隔)。
@@ -133,6 +141,22 @@ export function LiveGridClient({ eventId, teams }: { eventId: string; teams: Liv
                 <span className="rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
                   要確認({t.updatedAgoMinutes}分)
                 </span>
+              )}
+            </div>
+
+            <div className="mt-1.5 flex flex-wrap gap-1 border-t border-zinc-100 pt-1.5 dark:border-zinc-800">
+              {t.cards.length === 0 ? (
+                <span className="text-[10px] text-zinc-400">🎴カードなし</span>
+              ) : (
+                t.cards.map((c) => (
+                  <span
+                    key={c.name}
+                    className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${RARITY_CLASS[c.rarity]}`}
+                  >
+                    {c.name}
+                    {c.quantity > 1 ? `×${c.quantity}` : ""}
+                  </span>
+                ))
               )}
             </div>
           </div>
