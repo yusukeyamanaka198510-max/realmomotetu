@@ -17,6 +17,7 @@ import { CardEnabledPanel } from "./CardEnabledPanel";
 import { RehearsalResetPanel } from "./RehearsalResetPanel";
 import { CardUseAlert } from "./CardUseAlert";
 import { AnnouncementBroadcastPanel } from "./AnnouncementBroadcastPanel";
+import { StaffAutoRefresh } from "./StaffAutoRefresh";
 
 export default async function StaffPage() {
   const actor = await getActor();
@@ -236,6 +237,7 @@ export default async function StaffPage() {
           )}
         </h1>
         <CardUseAlert eventId={actor.eventId} />
+        <StaffAutoRefresh eventId={actor.eventId} />
         <div className="flex gap-4">
           <Link href="/staff/live-grid" className="text-sm text-zinc-500 hover:underline">
             全チーム一覧(大画面用) →
@@ -260,22 +262,22 @@ export default async function StaffPage() {
 
       <StaffSection icon="🚉" title="スタートチェックイン確認待ち" count={pendingStartCheckins.length} accent="sky">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <StartCheckinReviewQueue eventId={actor.eventId} initialItems={(pendingStartCheckins as any) ?? []} />
+        <StartCheckinReviewQueue initialItems={(pendingStartCheckins as any) ?? []} />
       </StaffSection>
 
       <StaffSection icon="🚩" title="到着確認待ち" count={pendingArrivals.length} accent="amber">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <ArrivalReviewQueue eventId={actor.eventId} initialItems={(pendingArrivals as any) ?? []} />
+        <ArrivalReviewQueue initialItems={(pendingArrivals as any) ?? []} />
       </StaffSection>
 
       <StaffSection icon="🎯" title="ミッション判定待ち" count={pendingMissions.length} accent="sky">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <MissionReviewQueue eventId={actor.eventId} initialItems={(pendingMissions as any) ?? []} />
+        <MissionReviewQueue initialItems={(pendingMissions as any) ?? []} />
       </StaffSection>
 
       <StaffSection icon="✨" title="ボーナスミッション判定待ち" count={pendingBonusMissions.length} accent="fuchsia">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        <BonusMissionReviewQueue eventId={actor.eventId} initialItems={(pendingBonusMissions as any) ?? []} />
+        <BonusMissionReviewQueue initialItems={(pendingBonusMissions as any) ?? []} />
       </StaffSection>
 
       {event && (

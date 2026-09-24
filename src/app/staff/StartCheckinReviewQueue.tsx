@@ -19,32 +19,13 @@ type ReviewItem = {
 };
 
 export function StartCheckinReviewQueue({
-  eventId,
   initialItems,
 }: {
-  eventId: string;
   initialItems: ReviewItem[];
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`start_checkin_queue:${eventId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "review_queue", filter: `event_id=eq.${eventId}` },
-        () => router.refresh()
-      )
-      .subscribe();
-    const interval = setInterval(() => router.refresh(), 4000);
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(interval);
-    };
-  }, [eventId, router]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -64,7 +45,11 @@ export function StartCheckinReviewQueue({
   }, [initialItems]);
 
   const [items, setItems] = useState(initialItems);
-  useEffect(() => setItems(initialItems), [initialItems]);
+  const [itemsSnapshot, setItemsSnapshot] = useState(initialItems);
+  if (initialItems !== itemsSnapshot) {
+    setItemsSnapshot(initialItems);
+    setItems(initialItems);
+  }
 
   async function review(startCheckinId: string, decision: "APPROVE" | "REJECT") {
     let reason: string | null = null;
