@@ -53,6 +53,7 @@ export default async function LiveGridPage() {
       currentStationId: ts?.current_station_id ?? null,
       currentStationName: ts?.current_station?.name ?? "-",
       coinBalance,
+      propertyAssetTotal,
       totalAssets: coinBalance + propertyAssetTotal,
       hasBombii: ts?.has_bombii ?? false,
       isPaused: ts?.is_paused ?? false,

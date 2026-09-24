@@ -29,6 +29,7 @@ export type LiveGridTeam = {
   currentStationId: string | null;
   currentStationName: string;
   coinBalance: number;
+  propertyAssetTotal: number;
   totalAssets: number;
   hasBombii: boolean;
   isPaused: boolean;
@@ -118,7 +119,10 @@ export function LiveGridClient({ eventId, teams }: { eventId: string; teams: Liv
 
             <p className="mt-1.5 truncate text-lg font-black text-zinc-900 dark:text-zinc-50">📍{t.currentStationName}</p>
             <p className="mt-0.5 font-mono text-sm font-bold tabular-nums text-zinc-800 dark:text-zinc-100">
-              {formatYen(t.totalAssets)}
+              💰{formatYen(t.coinBalance)}
+            </p>
+            <p className="font-mono text-xs font-bold tabular-nums text-zinc-500 dark:text-zinc-400">
+              🏠{formatYen(t.propertyAssetTotal)}
             </p>
 
             <div className="mt-1.5 flex flex-wrap gap-1">
