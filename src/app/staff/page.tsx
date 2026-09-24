@@ -234,6 +234,9 @@ export default async function StaffPage() {
           )}
         </h1>
         <div className="flex gap-4">
+          <Link href="/staff/live-grid" className="text-sm text-zinc-500 hover:underline">
+            全チーム一覧(大画面用) →
+          </Link>
           <Link href="/retrospective" className="text-sm text-zinc-500 hover:underline">
             振り返り →
           </Link>
